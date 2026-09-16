@@ -3,392 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile Cam Sender UI (VDO.Ninja Compatible)</title>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>OBSCam - Mobile Broadcaster</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK (v9 Compat Mode) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root {
-            --accent-color: #3b82f6;
-            --danger-color: #ef4444;
-            --bg-glass: rgba(18, 19, 24, 0.65);
-            --border-glass: rgba(255, 255, 255, 0.15);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-            color: #fff;
-        }
-
-        /* Fullscreen Video / Canvas Container */
-        .viewport {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* 9-Grid Overlay */
-        .grid-overlay {
-            position: absolute;
-            inset: 0;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .grid-overlay.active {
-            opacity: 1;
-        }
-
-        .grid-cell {
-            border: 0.5px solid rgba(255, 255, 255, 0.25);
-        }
-
-        /* Top Status Bar */
-        .status-bar {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            background: var(--bg-glass);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-glass);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            z-index: 10;
-            transition: opacity 0.4s ease;
-        }
-
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--danger-color);
-            border-radius: 50%;
-            animation: blink 1.5s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        /* Ergonomic Right Controls Panel */
-        .control-dock-right {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            background: var(--bg-glass);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-glass);
-            padding: 12px 10px;
-            border-radius: 28px;
-            z-index: 10;
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-
-        /* Auto-Hide Utility Class */
-        .ui-hidden {
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
-
-        .btn-action {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-action:active {
-            transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-action.active {
-            background: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-
-        /* Zoom Slider Slider Box */
-        .zoom-slider-container {
-            position: absolute;
-            right: 80px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--bg-glass);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-glass);
-            padding: 12px 8px;
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            height: 180px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .zoom-slider-container.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .zoom-slider-container input[type="range"] {
-            writing-mode: vertical-lr;
-            direction: rtl;
-            width: 6px;
-            height: 120px;
-            accent-color: var(--accent-color);
-        }
-
-        /* Embedded VDO.Ninja Frame (Hidden Processing Engine) */
-        #ninja-frame {
-            display: none;
-        }
+        body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     </style>
 </head>
-<body>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between p-4">
 
-    <div class="viewport" id="app-viewport">
-        <!-- Live Local Video Preview -->
-        <video id="webcam-preview" autoplay playsinline muted></video>
+    <!-- Header Section -->
+    <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-xl shadow-lg">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-video text-blue-500 text-base"></i>
+            <div>
+                <h1 class="font-bold text-sm tracking-wide leading-tight">OBSCam Mobile</h1>
+                <p id="roomDisplay" class="text-[10px] text-blue-400 font-mono">Room: Connecting...</p>
+            </div>
+        </div>
+        <!-- Select Active Camera Channel -->
+        <select id="camChannel" onchange="switchCamChannel()" class="bg-slate-800 text-slate-200 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500 cursor-pointer font-medium">
+            <option value="1">Cam 1</option>
+            <option value="2">Cam 2</option>
+            <option value="3">Cam 3</option>
+            <option value="4">Cam 4</option>
+        </select>
+    </div>
 
-        <!-- 9-Grid Lines -->
-        <div class="grid-overlay" id="grid-overlay">
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+    <!-- Main Camera Viewport -->
+    <div class="relative w-full aspect-[9/16] sm:aspect-video bg-black rounded-2xl overflow-hidden border border-slate-800 my-3 shadow-2xl flex items-center justify-center">
+        <!-- Live Video Element -->
+        <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        
+        <!-- Offline / Loading Placeholder -->
+        <div id="videoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-slate-400 space-y-2">
+            <i class="fa-solid fa-camera-rotate text-3xl animate-spin text-blue-500"></i>
+            <span class="text-xs font-medium">กำลังเตรียมพร้อมระบบกล้อง...</span>
         </div>
 
-        <!-- Top Telemetry & Status -->
-        <div class="status-bar" id="status-bar">
-            <div class="live-dot"></div>
-            <span id="stream-status">LIVE | ROOM: CAM1</span>
-            <span style="opacity: 0.5;">|</span>
-            <span id="fps-counter">60 FPS</span>
-        </div>
-
-        <!-- Vertical Zoom Slider Popup -->
-        <div class="zoom-slider-container" id="zoom-container">
-            <span style="font-size: 0.7rem;" id="zoom-val">1.0x</span>
-            <input type="range" id="zoom-range" min="1" max="5" step="0.1" value="1">
-            <i data-lucide="zoom-in" size="14"></i>
-        </div>
-
-        <!-- Right Ergonomic Action Bar -->
-        <div class="control-dock-right" id="control-dock">
-            <button class="btn-action" id="btn-grid" title="Grid 9 ช่อง">
-                <i data-lucide="grid-3x3" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-zoom" title="ปรับระยะ Zoom">
-                <i data-lucide="search" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-focus" title="ล็อคโฟกัส AF/MF">
-                <i data-lucide="focus" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-flash" title="เปิด/ปิด Flash">
-                <i data-lucide="zap" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-flip" title="สลับกล้อง หน้า/หลัง">
-                <i data-lucide="switch-camera" size="20"></i>
-            </button>
+        <!-- Live Status Overlay -->
+        <div class="absolute top-3 left-3 flex items-center space-x-2 bg-slate-950/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-800">
+            <span id="liveDot" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            <span id="statusText" class="text-[10px] font-semibold text-rose-400 uppercase tracking-wider">OFFLINE</span>
         </div>
     </div>
 
-    <!-- Hidden iframe for VDO.Ninja Engine -->
-    <iframe id="ninja-frame" allow="camera;microphone"></iframe>
+    <!-- Camera Controls & Actions -->
+    <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+            <button id="btnStart" onclick="startStreaming()" class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition active:scale-95">
+                <i class="fa-solid fa-play"></i>
+                <span>เริ่มส่งภาพสด</span>
+            </button>
+            <button onclick="flipCamera()" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium py-3 px-4 rounded-xl transition active:scale-95">
+                <i class="fa-solid fa-camera-rotate"></i>
+                <span>สลับกล้อง</span>
+            </button>
+        </div>
 
+        <!-- Connection Log -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 text-[10px] text-slate-400 font-mono space-y-1">
+            <div class="flex justify-between">
+                <span>Signaling:</span>
+                <span id="sigStatus" class="text-amber-400">Disconnected</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Peer Connection:</span>
+                <span id="peerStatus" class="text-slate-500">Idle</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- WebRTC & Firebase Logic -->
     <script>
-        let currentStream = null;
-        let videoTrack = null;
-        let uiTimeout = null;
-        let isFocusLocked = false;
-        let isFlashOn = false;
-        let facingMode = "environment"; // กล้องหลังโดยเริ่มต้น
+        // --- 1. Firebase Configuration (ใส่ Config ของคุณตรงนี้) ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
 
-        const videoElem = document.getElementById('webcam-preview');
-        const gridOverlay = document.getElementById('grid-overlay');
-        const zoomContainer = document.getElementById('zoom-container');
-        const zoomRange = document.getElementById('zoom-range');
-        const zoomVal = document.getElementById('zoom-val');
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
 
-        // 1. เริ่มระบบกล้องด้วย MediaStreams API
+        // --- 2. Global Variables ---
+        let localStream = null;
+        let peerConnection = null;
+        let currentFacingMode = "environment"; // กล้องหลังเป็นค่าเริ่มต้น
+        let activeCamIndex = "1";
+        let roomId = "";
+
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19020' },
+                { urls: 'stun:stun1.l.google.com:19020' }
+            ]
+        };
+
+        // --- 3. Get Room ID from URL Query ---
+        window.onload = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            roomId = urlParams.get('room');
+
+            if (!roomId) {
+                alert("ไม่พบ Room ID! กรุณาสแกน QR Code ใหม่อีกครั้ง");
+                document.getElementById('roomDisplay').innerText = "Room: Error (No ID)";
+                return;
+            }
+
+            document.getElementById('roomDisplay').innerText = `Room: #${roomId}`;
+            document.getElementById('sigStatus').innerText = "Ready";
+            document.getElementById('sigStatus').className = "text-emerald-400";
+
+            // เปิดกล้องไว้รอเริ่มต้น
+            await initCamera();
+        };
+
+        // --- 4. Initialize Local Camera ---
         async function initCamera() {
             try {
-                if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop());
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
                 }
 
-                const constraints = {
+                localStream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: facingMode,
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 },
-                        frameRate: { ideal: 60, max: 60 }
+                        facingMode: currentFacingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
                     },
-                    audio: false
-                };
+                    audio: true
+                });
 
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElem.srcObject = currentStream;
-                videoTrack = currentStream.getVideoTracks()[0];
-
-                // ตรวจสอบความสามารถของกล้องที่เบราว์เซอร์รองรับ (Hardware capabilities)
-                const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
-                
-                // ปรับค่า Zoom Min/Max ให้ตรงกับตัวกล้องมือถือ
-                if (capabilities.zoom) {
-                    zoomRange.min = capabilities.zoom.min;
-                    zoomRange.max = capabilities.zoom.max;
-                    zoomRange.step = capabilities.zoom.step;
-                }
-
-                // เชื่อมต่อไปยัง VDO.Ninja Engine ยิงท่อ push ไปยัง Control Center
-                setupVDONinja();
-
+                const videoElem = document.getElementById('localVideo');
+                videoElem.srcObject = localStream;
+                document.getElementById('videoPlaceholder').classList.add('hidden');
             } catch (err) {
-                console.error("Camera Access Error: ", err);
-                alert("ไม่สามารถเข้าถึงกล้องได้ โปรดตรวจสอบการอนุญาตสิทธิ์");
+                console.error("Camera Error:", err);
+                alert("ไม่สามารถเข้าถึงกล้อง/ไมโครโฟนได้: " + err.message);
             }
         }
 
-        // 2. ตั้งค่า VDO.Ninja Integration
-        function setupVDONinja() {
-            const roomName = "LIVE_DOCK_CAM1"; // ชื่อห้องเชื่อมต่อกับ Control Center
-            const pushStreamId = "CAM_SENDER_01";
-            
-            // Parameter &ptz &quality=0 เพื่อภาพคมชัดสูงและควบคุมระยะได้
-            const ninjaUrl = `https://vdo.ninja/?push=${pushStreamId}&room=${roomName}&quality=0&autostart&cleanoutput&ptz`;
-            document.getElementById('ninja-frame').src = ninjaUrl;
+        // --- 5. Start WebRTC Streaming (Create Offer) ---
+        async function startStreaming() {
+            if (!localStream) {
+                await initCamera();
+            }
+
+            activeCamIndex = document.getElementById('camChannel').value;
+            const signalRef = db.ref(`rooms/${roomId}/cam_${activeCamIndex}`);
+
+            // ล้างข้อมูลสัญญาณเก่า
+            await signalRef.remove();
+
+            peerConnection = new RTCPeerConnection(rtcConfig);
+
+            // เพิ่ม Track ภาพ/เสียง เข้า PeerConnection
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            // ส่ง ICE Candidates ไปที่ Firebase
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    signalRef.child('offerCandidates').push(event.candidate.toJSON());
+                }
+            };
+
+            peerConnection.oniceconnectionstatechange = () => {
+                const state = peerConnection.iceConnectionState;
+                document.getElementById('peerStatus').innerText = state;
+
+                if (state === 'connected') {
+                    document.getElementById('statusText').innerText = "LIVE STREAMING";
+                    document.getElementById('statusText').className = "text-[10px] font-semibold text-emerald-400 uppercase tracking-wider";
+                    document.getElementById('liveDot').className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                }
+            };
+
+            // สร้าง Offer (SDP)
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            // บันทึก Offer ลง Firebase
+            await signalRef.child('offer').set({
+                type: offer.type,
+                sdp: offer.sdp
+            });
+
+            // ฟัง Answer ตอบกลับมาจาก OBS Control Center
+            signalRef.child('answer').on('value', async (snapshot) => {
+                const data = snapshot.val();
+                if (data && peerConnection && !peerConnection.currentRemoteDescription) {
+                    const answerSDP = new RTCSessionDescription(data);
+                    await peerConnection.setRemoteDescription(answerSDP);
+                }
+            });
+
+            // ฟัง Answer Candidates
+            signalRef.child('answerCandidates').on('child_added', (snapshot) => {
+                const data = snapshot.val();
+                if (data && peerConnection) {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(data));
+                }
+            });
+
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnStart').classList.add('opacity-50');
+            document.getElementById('btnStart').innerText = "กำลังเชื่อมต่อ...";
         }
 
-        // 3. ปรับ Zoom เรียลไทม์
-        zoomRange.addEventListener('input', async (e) => {
-            const value = e.target.value;
-            zoomVal.innerText = `${parseFloat(value).toFixed(1)}x`;
-            if (videoTrack && 'applyConstraints' in videoTrack) {
-                try {
-                    await videoTrack.applyConstraints({ advanced: [{ zoom: value }] });
-                } catch (err) {
-                    console.log("Zoom not supported on this device track");
+        // --- 6. Helper Functions ---
+        async function flipCamera() {
+            currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+            await initCamera();
+
+            // หากเชื่อมต่ออยู่แล้ว ให้เปลี่ยน Track บน PeerConnection
+            if (peerConnection) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(videoTrack);
                 }
             }
-        });
-
-        // 4. ล็อคโฟกัส (Focus Lock)
-        document.getElementById('btn-focus').addEventListener('click', async function() {
-            isFocusLocked = !isFocusLocked;
-            this.classList.toggle('active', isFocusLocked);
-
-            if (videoTrack && 'applyConstraints' in videoTrack) {
-                try {
-                    await videoTrack.applyConstraints({
-                        advanced: [{ focusMode: isFocusLocked ? 'manual' : 'continuous' }]
-                    });
-                } catch (err) {
-                    console.log("Focus mode change not supported");
-                }
-            }
-        });
-
-        // 5. สลับเปิด/ปิด ไฟแฟลช (Torch)
-        document.getElementById('btn-flash').addEventListener('click', async function() {
-            isFlashOn = !isFlashOn;
-            this.classList.toggle('active', isFlashOn);
-
-            if (videoTrack && 'applyConstraints' in videoTrack) {
-                try {
-                    await videoTrack.applyConstraints({
-                        advanced: [{ torch: isFlashOn }]
-                    });
-                } catch (err) {
-                    alert("อุปกรณ์นี้ไม่รองรับการเปิดไฟแฟลชผ่านเว็บ Browser");
-                }
-            }
-        });
-
-        // 6. เปิด/ปิด เส้น Grid 9 ช่อง
-        document.getElementById('btn-grid').addEventListener('click', function() {
-            gridOverlay.classList.toggle('active');
-            this.classList.toggle('active');
-        });
-
-        // 7. Toggle Zoom Control Popup
-        document.getElementById('btn-zoom').addEventListener('click', function() {
-            zoomContainer.classList.toggle('show');
-            this.classList.toggle('active');
-        });
-
-        // 8. สลับกล้องหน้า/หลัง (Memory Lens support)
-        document.getElementById('btn-flip').addEventListener('click', () => {
-            facingMode = (facingMode === "user") ? "environment" : "user";
-            localStorage.setItem('preferred_lens', facingMode); // บันทึกลง Memory
-            initCamera();
-        });
-
-        // 9. ระบบ Auto-Hide UI เมื่อไม่ได้แตะหน้าจอ (Ergonomic Support)
-        function resetUINodeTimer() {
-            document.getElementById('control-dock').classList.remove('ui-hidden');
-            document.getElementById('status-bar').classList.remove('ui-hidden');
-
-            clearTimeout(uiTimeout);
-            uiTimeout = setTimeout(() => {
-                document.getElementById('control-dock').classList.add('ui-hidden');
-                document.getElementById('status-bar').classList.add('ui-hidden');
-                zoomContainer.classList.remove('show');
-                document.getElementById('btn-zoom').classList.remove('active');
-            }, 5000); // 5 วินาที
         }
 
-        document.getElementById('app-viewport').addEventListener('touchstart', resetUINodeTimer);
-        document.getElementById('app-viewport').addEventListener('mousemove', resetUINodeTimer);
-
-        // โหลดค่ากล้องล่าสุดที่เคยเลือกไว้ (Memory Lens)
-        const savedLens = localStorage.getItem('preferred_lens');
-        if (savedLens) facingMode = savedLens;
-
-        // เริ่มต้นการทำงานและ Lucide Icons
-        lucide.createIcons();
-        initCamera();
-        resetUINodeTimer();
+        function switchCamChannel() {
+            if (peerConnection) {
+                alert("มีการเปลี่ยน Channel กรุณากด 'เริ่มส่งภาพสด' ใหม่อีกครั้ง");
+                peerConnection.close();
+                peerConnection = null;
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnStart').classList.remove('opacity-50');
+                document.getElementById('btnStart').innerHTML = `<i class="fa-solid fa-play"></i><span>เริ่มส่งภาพสด</span>`;
+                document.getElementById('statusText').innerText = "OFFLINE";
+                document.getElementById('statusText').className = "text-[10px] font-semibold text-rose-400 uppercase tracking-wider";
+                document.getElementById('liveDot').className = "w-2 h-2 rounded-full bg-rose-500 animate-pulse";
+            }
+        }
     </script>
 </body>
 </html>
