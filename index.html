@@ -73,6 +73,37 @@
             box-shadow: 0 0 8px #00f59b;
         }
 
+        /* แถบปรับ Zoom บนหน้าจอหลัก (ด้านขวา) */
+        .zoom-overlay {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            padding: 16px 8px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            gap: 12px;
+        }
+        .zoom-slider-vertical {
+            writing-mode: bt-lr; /* IE/Edge */
+            -webkit-appearance: slider-vertical; /* WebKit */
+            width: 8px;
+            height: 160px;
+            accent-color: #00f59b;
+            cursor: pointer;
+        }
+        .zoom-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #00f59b;
+        }
+
         /* แถบควบคุมด้านล่าง */
         .controls-bottom {
             position: relative;
@@ -107,41 +138,13 @@
             border-color: #00f59b;
         }
 
-        /* กล่องแจ้งเตือนกลางจอ */
-        .info-panel {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 5;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 12px;
-            backdrop-filter: blur(8px);
-            width: 80%;
-            max-width: 320px;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
-        }
-        .info-panel h2 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            color: #00f59b;
-        }
-        .info-panel p {
-            margin: 4px 0;
-            font-size: 12px;
-            color: #ccc;
-        }
-
         /* แผงเมนูตั้งค่ากล้อง (Settings Drawer) */
         .settings-panel {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
-            max-height: 80vh;
+            max-height: 85vh;
             background: rgba(18, 18, 20, 0.95);
             backdrop-filter: blur(16px);
             border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -227,11 +230,11 @@
         <!-- VDO.Ninja Engine ใน IFrame -->
         <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
 
-        <!-- ข้อความแจ้งเตือนกลางจอ -->
-        <div class="info-panel" id="info-panel">
-            <h2>📱 พร้อมถ่ายทอดสด</h2>
-            <p id="mode-text">กำลังโหลดการตั้งค่า...</p>
-            <p style="font-size: 10px; color: #888; margin-top: 10px;">หากกล้องไม่ขึ้น ให้กดอนุญาตสิทธิ์กล้อง/ไมค์ บนเบราว์เซอร์</p>
+        <!-- หลอดซูมบนหน้าจอหลัก (ด้านขวา) -->
+        <div class="zoom-overlay">
+            <span class="zoom-label" id="main-zoom-val">1.0x</span>
+            <input type="range" class="zoom-slider-vertical" id="main-zoom-slider" min="1" max="5" step="0.1" value="1" oninput="changeZoom(this.value)">
+            <span style="font-size: 12px;">🔍</span>
         </div>
 
         <!-- แถบปุ่มควบคุมด้านล่าง -->
@@ -246,8 +249,31 @@
         <!-- แผงเมนูตั้งค่ากล้อง & Bitrate (Settings Drawer) -->
         <div class="settings-panel" id="settings-panel">
             <div class="settings-header">
-                <h3>⚙️ ตั้งค่ากล้อง & สตรีม</h3>
+                <h3>⚙️ ตั้งค่ากล้อง & การเชื่อมต่อ</h3>
                 <button class="btn-close" onclick="toggleSettings()">✖</button>
+            </div>
+
+            <!-- เลือกกล้อง (รองรับทุกเลนส์ของมือถือ) -->
+            <div class="setting-group">
+                <label>เลือกอุปกรณ์กล้อง (Camera Source)</label>
+                <div class="setting-control">
+                    <select id="camera-select" onchange="changeVideoDevice(this.value)">
+                        <option value="">กำลังโหลดรายการกล้อง...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- เลือกโหมดการเชื่อมต่อ (Connection Mode) -->
+            <div class="setting-group">
+                <label>โหมดการเชื่อมต่อ (Connection Mode)</label>
+                <div class="setting-control">
+                    <select id="connection-mode-select" onchange="changeConnectionMode(this.value)">
+                        <option value="0">🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำสุด)</option>
+                        <option value="1">📶 Wi-Fi Mode (เสถียร / สมดุล)</option>
+                        <option value="2">📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)</option>
+                        <option value="custom">⚙️ Custom Mode (ตั้งค่ากำหนดเอง)</option>
+                    </select>
+                </div>
             </div>
 
             <!-- ปรับเลือก Bitrate -->
@@ -255,11 +281,11 @@
                 <label>อัตราบิตเรต (Bitrate Selection)</label>
                 <div class="setting-control">
                     <select id="bitrate-select" onchange="changeBitratePreset(this.value)">
-                        <option value="auto">อัตโนมัติ ตามโหมดตั้งต้น</option>
+                        <option value="auto">ตามโหมดการเชื่อมต่อ</option>
                         <option value="1000">1,000 kbps (1 Mbps - ประหยัดเน็ต)</option>
                         <option value="2500">2,500 kbps (2.5 Mbps - เน็ตมือถือ)</option>
-                        <option value="4000">4,000 kbps (4 Mbps - Wi-Fi ทั่วไป)</option>
-                        <option value="6000">6,000 kbps (6 Mbps - Wi-Fi แรง/USB)</option>
+                        <option value="3500">3,500 kbps (3.5 Mbps - Wi-Fi ทั่วไป)</option>
+                        <option value="6000">6,000 kbps (6 Mbps - USB / Wi-Fi แรง)</option>
                         <option value="10000">10,000 kbps (10 Mbps - USB High Quality)</option>
                         <option value="15000">15,000 kbps (15 Mbps - Ultra HD)</option>
                         <option value="custom">กำหนดเอง (Manual Slider)</option>
@@ -273,16 +299,6 @@
                 <div class="setting-control slider-container">
                     <input type="range" id="bitrate-slider" min="500" max="20000" step="500" value="3500" oninput="updateBitrateSliderLabel(this.value)" onchange="changeBitrateValue(this.value)">
                     <span class="slider-value" id="bitrate-val">3,500 k</span>
-                </div>
-            </div>
-
-            <!-- เลือกกล้อง -->
-            <div class="setting-group">
-                <label>เลือกอุปกรณ์กล้อง (Camera Source)</label>
-                <div class="setting-control">
-                    <select id="camera-select" onchange="changeVideoDevice(this.value)">
-                        <option value="">กำลังโหลดรายการกล้อง...</option>
-                    </select>
                 </div>
             </div>
 
@@ -316,17 +332,8 @@
                 <div class="setting-control">
                     <select id="fps-select" onchange="changeFPS(this.value)">
                         <option value="60">60 FPS</option>
-                        <option value="30" selected>30 FPS</option>
+                        <option value="30">30 FPS</option>
                     </select>
-                </div>
-            </div>
-
-            <!-- ปรับระยะซูม -->
-            <div class="setting-group">
-                <label>ซูมภาพ (Zoom)</label>
-                <div class="setting-control slider-container">
-                    <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="changeZoom(this.value)">
-                    <span class="slider-value" id="zoom-val">1.0x</span>
                 </div>
             </div>
         </div>
@@ -341,26 +348,28 @@
         // ดึง URL Parameters
         const urlParams = new URLSearchParams(window.location.search);
         const pushId = urlParams.get('push');
-        const quality = urlParams.get('quality') || '0';
+        const initialQuality = urlParams.get('quality') || '0';
 
         document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Unknown'}`;
 
+        // การตั้งค่าตามโหมดการเชื่อมต่อ
         function getQualitySettings(q) {
             if (q === '0') {
-                return { label: '🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำ)', bitrate: 6000, maxfps: 60 };
+                return { label: '🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำ)', bitrate: 6000, maxfps: 60, res: '1920x1080' };
             } else if (q === '1') {
-                return { label: '📶 Wi-Fi Mode (เสถียร / สมดุล)', bitrate: 3500, maxfps: 30 };
+                return { label: '📶 Wi-Fi Mode (เสถียร / สมดุล)', bitrate: 3500, maxfps: 30, res: '1280x720' };
             } else {
-                return { label: '📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)', bitrate: 1500, maxfps: 30 };
+                return { label: '📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)', bitrate: 1500, maxfps: 30, res: '1280x720' };
             }
         }
 
-        const qSettings = getQualitySettings(quality);
-        document.getElementById('mode-text').innerText = qSettings.label;
-
-        // กำหนดค่าบิตเรตเริ่มต้นให้ Slider
-        document.getElementById('bitrate-slider').value = qSettings.bitrate;
-        document.getElementById('bitrate-val').innerText = `${qSettings.bitrate.toLocaleString()} k`;
+        let currentQualitySettings = getQualitySettings(initialQuality);
+        
+        // ตั้งค่าตัวเลือกในหน้า UI ให้ตรงกับพารามิเตอร์เริ่มต้น
+        document.getElementById('connection-mode-select').value = initialQuality;
+        document.getElementById('bitrate-slider').value = currentQualitySettings.bitrate;
+        document.getElementById('bitrate-val').innerText = `${currentQualitySettings.bitrate.toLocaleString()} k`;
+        document.getElementById('fps-select').value = currentQualitySettings.maxfps.toString();
 
         // เริ่มต้นสร้าง VDO.Ninja Engine
         function initNinja() {
@@ -370,11 +379,23 @@
                 return;
             }
 
-            // เปิดใช้งาน API (&api=1), ซ่อนปุ่ม VDO.Ninja (&cb=0)
             let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back`;
-            ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}`;
+            ninjaUrl += `&videobitrate=${currentQualitySettings.bitrate}&maxfps=${currentQualitySettings.maxfps}`;
 
             iframe.src = ninjaUrl;
+        }
+
+        // ขอสิทธิ์และดึงอุปกรณ์กล้อง/ไมค์ โดยตรงจากเบราว์เซอร์
+        async function fetchAvailableDevices() {
+            try {
+                // ขออนุญาตเพื่ออ่าน label/ชื่อกล้องได้ถูกต้อง
+                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                populateDeviceLists(devices);
+            } catch (err) {
+                // หากติดข้อจำกัด ให้ส่งคำสั่งผ่าน VDO.Ninja แทน
+                sendNinjaCommand({ action: 'getDevices' });
+            }
         }
 
         // รับข้อมูลสถานะกลับมาจาก VDO.Ninja API
@@ -384,33 +405,49 @@
             try {
                 const data = JSON.parse(e.data);
 
-                // เมื่อระบบเชื่อมต่อสำเร็จ
                 if (data.action === 'system' && data.value === 'connected') {
                     document.getElementById('status-dot').classList.add('active');
                     document.getElementById('status-text').innerText = 'LIVE ONLINE';
 
-                    setTimeout(() => {
-                        document.getElementById('info-panel').style.opacity = '0';
-                    }, 3000);
-
-                    // ขอรายการอุปกรณ์กล้องและไมค์จาก VDO.Ninja
-                    sendNinjaCommand({ action: 'getDevices' });
+                    fetchAvailableDevices();
                 }
 
-                // เมื่อได้รับรายการอุปกรณ์ (Device List)
                 if (data.action === 'deviceList') {
                     populateDeviceLists(data.value);
                 }
             } catch (err) {
-                // ข้ามข้อความที่ไม่ใช่ JSON
+                // Ignore non-JSON
             }
         });
 
-        // ส่งคำสั่ง API ไปที่ iframe
         function sendNinjaCommand(cmdObject) {
             if (iframe && iframe.contentWindow) {
                 iframe.contentWindow.postMessage(JSON.stringify(cmdObject), '*');
             }
+        }
+
+        // === ฟังก์ชันสลับโหมดการเชื่อมต่อ (Connection Mode) ===
+
+        function changeConnectionMode(modeKey) {
+            const bitrateSelect = document.getElementById('bitrate-select');
+
+            if (modeKey === 'custom') return;
+
+            const settings = getQualitySettings(modeKey);
+            currentQualitySettings = settings;
+
+            // อัปเดต UI ข้อความและพารามิเตอร์
+            document.getElementById('bitrate-slider').value = settings.bitrate;
+            updateBitrateSliderLabel(settings.bitrate);
+            document.getElementById('fps-select').value = settings.maxfps.toString();
+            bitrateSelect.value = 'auto';
+
+            // ส่งคำสั่งปรับการตั้งค่าไปยัง VDO.Ninja Engine แบบ Real-time
+            sendNinjaCommand({ action: 'bitrate', value: settings.bitrate });
+            sendNinjaCommand({ action: 'framerate', value: settings.maxfps });
+
+            const [w, h] = settings.res.split('x');
+            sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
         }
 
         // === ฟังก์ชันปุ่มควบคุมหลัก ===
@@ -448,26 +485,25 @@
             const panel = document.getElementById('settings-panel');
             panel.classList.toggle('open');
             if (panel.classList.contains('open')) {
-                sendNinjaCommand({ action: 'getDevices' });
+                fetchAvailableDevices();
             }
         }
 
         // === ฟังก์ชันจัดการ BITRATE ===
 
         function changeBitratePreset(val) {
-            let targetBitrate = qSettings.bitrate;
+            let targetBitrate = currentQualitySettings.bitrate;
 
             if (val === 'auto') {
-                targetBitrate = qSettings.bitrate;
+                targetBitrate = currentQualitySettings.bitrate;
             } else if (val !== 'custom') {
                 targetBitrate = parseInt(val);
+                document.getElementById('connection-mode-select').value = 'custom';
             }
 
-            // ปรับค่าของ Slider ให้ตรงกับ Preset
             document.getElementById('bitrate-slider').value = targetBitrate;
             updateBitrateSliderLabel(targetBitrate);
 
-            // ส่งคำสั่งปรับ Bitrate ไปยัง VDO.Ninja API
             sendNinjaCommand({ action: 'bitrate', value: targetBitrate });
         }
 
@@ -477,6 +513,7 @@
 
         function changeBitrateValue(val) {
             document.getElementById('bitrate-select').value = 'custom';
+            document.getElementById('connection-mode-select').value = 'custom';
             sendNinjaCommand({ action: 'bitrate', value: parseInt(val) });
         }
 
@@ -489,14 +526,20 @@
             cameraSelect.innerHTML = '';
             micSelect.innerHTML = '';
 
+            let camIndex = 1;
+            let micIndex = 1;
+
             devices.forEach(device => {
                 const option = document.createElement('option');
                 option.value = device.deviceId;
-                option.text = device.label || `${device.kind} (${device.deviceId.slice(0,5)}...)`;
 
                 if (device.kind === 'videoinput') {
+                    let labelName = device.label || `กล้องตัวที่ ${camIndex++}`;
+                    option.text = labelName;
                     cameraSelect.appendChild(option);
                 } else if (device.kind === 'audioinput') {
+                    let labelName = device.label || `ไมโครโฟน ${micIndex++}`;
+                    option.text = labelName;
                     micSelect.appendChild(option);
                 }
             });
@@ -504,6 +547,7 @@
 
         function changeVideoDevice(deviceId) {
             if (deviceId) {
+                // สลับไปยังกล้องเฉพาะตาม ID
                 sendNinjaCommand({ action: 'changeVideoTarget', value: deviceId });
             }
         }
@@ -516,16 +560,18 @@
 
         function changeResolution(res) {
             if (res === 'default') return;
+            document.getElementById('connection-mode-select').value = 'custom';
             const [w, h] = res.split('x');
             sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
         }
 
         function changeFPS(fps) {
+            document.getElementById('connection-mode-select').value = 'custom';
             sendNinjaCommand({ action: 'framerate', value: parseInt(fps) });
         }
 
         function changeZoom(val) {
-            document.getElementById('zoom-val').innerText = `${val}x`;
+            document.getElementById('main-zoom-val').innerText = `${val}x`;
             sendNinjaCommand({ action: 'zoom', value: parseFloat(val) });
         }
 
