@@ -2,383 +2,71 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Ninja Mobile Sender</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OBS Ninja Mobile Camera Sender</title>
     <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
         body {
-            background-color: #121214;
-            color: #efeff1;
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 12px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            background-color: #1a1a1e;
-            border: 1px solid #2f2f35;
-            border-radius: 10px;
-            padding: 14px;
-            width: 100%;
-            max-width: 380px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        h3 {
-            margin: 0;
-            font-size: 14px;
-            color: #00f59b;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 16/9;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1.5px solid #2f2f35;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        video.mirrored {
-            transform: scaleX(-1);
-        }
-        .status-badge {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: bold;
-            color: #adadb8;
-            backdrop-filter: blur(4px);
-        }
-        .status-badge.live {
-            color: #00f59b;
-            background: rgba(0, 245, 155, 0.2);
-        }
-        .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: #71717a;
-        }
-        .status-badge.live .dot {
-            background-color: #00f59b;
-            box-shadow: 0 0 6px #00f59b;
-            animation: pulse 1.2s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
-        .control-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        label {
-            font-size: 10px;
-            color: #adadb8;
-            font-weight: 500;
-        }
-        select, input {
-            width: 100%;
-            padding: 8px;
-            background-color: #0e0e10;
-            color: #efeff1;
-            border: 1px solid #2f2f35;
-            border-radius: 6px;
-            font-size: 12px;
-            outline: none;
-        }
-        select:focus, input:focus {
-            border-color: #00f59b;
-        }
-        .btn-group {
-            display: flex;
-            gap: 8px;
-        }
-        button {
-            background-color: #9146ff;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 12px;
-            transition: all 0.2s;
-            flex: 1;
-            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            height: 100vh;
+            overflow: hidden;
+            text-align: center;
         }
-        button:hover {
-            background-color: #772ce8;
+        #error-container {
+            padding: 20px;
+            max-width: 300px;
+            display: none;
         }
-        button.active-toggle {
-            background-color: #00f59b;
-            color: #000;
+        h2 {
+            color: #ff4f4f;
+            font-size: 18px;
+            margin-bottom: 10px;
         }
-        button.btn-danger {
-            background-color: #eb0400;
-        }
-        button.btn-danger:hover {
-            background-color: #c20300;
-        }
-        .info-box {
-            font-size: 10px;
+        p {
+            font-size: 13px;
             color: #adadb8;
-            background: #0e0e10;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.05);
-            word-break: break-all;
+            line-height: 1.5;
         }
-        .info-box span {
-            color: #00f59b;
-            font-family: monospace;
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h3>📱 Mobile Camera Sender</h3>
-
-        <!-- หน้าต่างพรีวิวกล้องมือถือ -->
-        <div class="video-wrapper">
-            <div class="status-badge" id="status-badge">
-                <span class="dot"></span>
-                <span id="status-text">พร้อมเชื่อมต่อ</span>
-            </div>
-            <video id="localVideo" autoplay playsinline muted></video>
-        </div>
-
-        <!-- รายละเอียด Stream ID -->
-        <div class="info-box">
-            Stream ID: <span id="display-stream-id">ยังไม่ได้กำหนด</span>
-        </div>
-
-        <!-- ตั้งค่าอุปกรณ์ -->
-        <div class="control-grid">
-            <div class="form-group">
-                <label for="cameraSelect">เลือกกล้อง:</label>
-                <select id="cameraSelect" onchange="changeCamera()">
-                    <option value="">กำลังโหลดกล้อง...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="qualitySelect">ความละเอียด:</label>
-                <select id="qualitySelect" onchange="restartStream()">
-                    <option value="1280">HD (720p)</option>
-                    <option value="1920">FHD (1080p)</option>
-                    <option value="640" selected>SD (480p - แนะนำมือถือ)</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- ปุ่มควบคุมการตั้งค่าเพิ่มเติม -->
-        <div class="control-grid">
-            <button id="mic-btn" class="active-toggle" onclick="toggleAudio()">🎙️ เปิดไมค์</button>
-            <button id="mirror-btn" class="active-toggle" onclick="toggleMirror()">🪞 กลับภาพ</button>
-        </div>
-
-        <!-- ปุ่มเริ่ม/หยุดส่งสัญญาณ -->
-        <div class="btn-group">
-            <button id="connect-btn" onclick="toggleConnection()">🚀 เริ่มส่งสัญญาณ</button>
-        </div>
+    <div id="error-container">
+        <h2>❌ ไม่พบ Stream ID</h2>
+        <p>กรุณาสแกน QR Code ใหม่จากหน้าจอควบคุมหลัก (Controller) เพื่อเปิดใช้งานกล้อง</p>
     </div>
 
-    <!-- ซ่อน iframe สำหรับส่งสัญญาณผ่าน VDO.Ninja Push API -->
-    <iframe id="ninja-sender-frame" style="display:none;"></iframe>
+    <iframe id="push-iframe" allow="autoplay; camera; microphone; fullscreen; display-capture"></iframe>
 
     <script>
-        let localStream = null;
-        let isStreaming = false;
-        let audioEnabled = true;
-        let isMirrored = true;
-        let currentStreamId = "";
-
-        // ดึง Stream ID จาก URL parameter (เช่น ?push=cam_slot_1_abcd)
+        // ดึงค่า ?push=... จาก URL ที่มือถือสแกนเข้ามา
         const urlParams = new URLSearchParams(window.location.search);
-        currentStreamId = urlParams.get('push') || 'demo_cam_' + Math.random().toString(36).substring(2, 6);
-        document.getElementById('display-stream-id').innerText = currentStreamId;
+        const pushId = urlParams.get('push');
 
-        async function initCamera() {
-            try {
-                if (localStream) {
-                    localStream.getTracks().forEach(track => track.stop());
-                }
-
-                const selectedCamId = document.getElementById('cameraSelect').value;
-                const maxWidth = parseInt(document.getElementById('qualitySelect').value);
-
-                const constraints = {
-                    video: {
-                        deviceId: selectedCamId ? { exact: selectedCamId } : undefined,
-                        width: { ideal: maxWidth }
-                    },
-                    audio: audioEnabled
-                };
-
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                const videoElement = document.getElementById('localVideo');
-                videoElement.srcObject = localStream;
-
-                // โหลดรายชื่อกล้องครั้งแรก
-                if (document.getElementById('cameraSelect').children.length <= 1) {
-                    await populateCameraList();
-                }
-            } catch (err) {
-                alert("ไม่สามารถเข้าถึงกล้องหรือไมค์ได้: " + err.message);
-                updateStatus("error", "เกิดข้อผิดพลาด");
-            }
+        if (pushId) {
+            // สร้างลิงก์ส่งสัญญาณภาพของ VDO.Ninja (โหมด Push พร้อมตั้งค่าความคมชัดและการใช้งานมือถือ)
+            const vdoNinjaPushUrl = `https://vdo.ninja/?push=${pushId}&camera=1&autostart&quality=1&scale=100&bitrate=2500`;
+            document.getElementById('push-iframe').src = vdoNinjaPushUrl;
+        } else {
+            // หากไม่มีพารามิเตอร์ push ให้ซ่อน iframe แล้วแสดงข้อความแจ้งเตือน
+            document.getElementById('push-iframe').style.display = 'none';
+            document.getElementById('error-container').style.display = 'block';
         }
-
-        async function populateCameraList() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoSelect = document.getElementById('cameraSelect');
-            videoSelect.innerHTML = '';
-            
-            devices.forEach(device => {
-                if (device.kind === 'videoinput') {
-                    const option = document.createElement('option');
-                    option.value = device.deviceId;
-                    option.text = device.label || `กล้อง (${videoSelect.length + 1})`;
-                    videoSelect.appendChild(option);
-                }
-            });
-        }
-
-        async function changeCamera() {
-            await initCamera();
-            if (isStreaming) {
-                restartStream();
-            }
-        }
-
-        function restartStream() {
-            if (isStreaming) {
-                stopStream();
-                startStream();
-            } else {
-                initCamera();
-            }
-        }
-
-        function toggleConnection() {
-            if (!isStreaming) {
-                startStream();
-            } else {
-                stopStream();
-            }
-        }
-
-        function startStream() {
-            if (!localStream) {
-                alert("กรุณารอการเปิดกล้องก่อน");
-                return;
-            }
-
-            // สร้าง URL สำหรับส่งภาพไปที่ VDO.Ninja (โหมด Push)
-            // โดยให้ iframe โหลดหน้า push ของ vdo.ninja
-            const pushUrl = `https://vdo.ninja/?push=${currentStreamId}&quality=0&autostart=1&webcam=1`;
-            document.getElementById('ninja-sender-frame').src = pushUrl;
-
-            isStreaming = true;
-            const btn = document.getElementById('connect-btn');
-            btn.innerText = "🛑 หยุดส่งสัญญาณ";
-            btn.className = "btn-danger";
-            
-            updateStatus("live", "กำลัง LIVE ส่งสัญญาณ");
-        }
-
-        function stopStream() {
-            document.getElementById('ninja-sender-frame').src = "";
-            isStreaming = false;
-            
-            const btn = document.getElementById('connect-btn');
-            btn.innerText = "🚀 เริ่มส่งสัญญาณ";
-            btn.className = "";
-
-            updateStatus("ready", "พร้อมเชื่อมต่อ");
-        }
-
-        function toggleAudio() {
-            audioEnabled = !audioEnabled;
-            if (localStream) {
-                localStream.getAudioTracks().forEach(track => {
-                    track.enabled = audioEnabled;
-                });
-            }
-            const btn = document.getElementById('mic-btn');
-            if (audioEnabled) {
-                btn.innerText = "🎙️ เปิดไมค์";
-                btn.classList.add("active-toggle");
-            } else {
-                btn.innerText = "🔇 ปิดไมค์";
-                btn.classList.remove("active-toggle");
-            }
-        }
-
-        function toggleMirror() {
-            isMirrored = !isMirrored;
-            const videoEl = document.getElementById('localVideo');
-            const btn = document.getElementById('mirror-btn');
-            if (isMirrored) {
-                videoEl.classList.add("mirrored");
-                btn.classList.add("active-toggle");
-            } else {
-                videoEl.classList.remove("mirrored");
-                btn.classList.remove("active-toggle");
-            }
-        }
-
-        function updateStatus(state, text) {
-            const badge = document.getElementById('status-badge');
-            const txt = document.getElementById('status-text');
-            txt.innerText = text;
-            if (state === 'live') {
-                badge.classList.add('live');
-            } else {
-                badge.classList.remove('live');
-            }
-        }
-
-        // เริ่มต้นทำงานเมื่อโหลดหน้าเว็บ
-        window.onload = async () => {
-            document.getElementById('localVideo').classList.add("mirrored");
-            await initCamera();
-        };
     </script>
 </body>
 </html>
