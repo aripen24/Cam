@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Auto Mobile Camera - OBS Ninja</title>
+    <title>OBS Mobile Cam - Auto Share</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,21 +13,100 @@
             padding: 0;
             -webkit-tap-highlight-color: transparent;
         }
-        body, html {
+        body {
             background-color: #000000;
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            height: 100%;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Viewport เต็มจอ */
-        .camera-container {
+        /* Top HUD Bar */
+        .hud-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 54px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 20;
+        }
+
+        /* LIVE Indicator Badge */
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid #333;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(8px);
+        }
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background-color: #71717a;
+        }
+        .live-badge.online {
+            border-color: #00f59b;
+            color: #00f59b;
+            background: rgba(0, 245, 155, 0.15);
+        }
+        .live-badge.online .status-dot {
+            background-color: #00f59b;
+            box-shadow: 0 0 10px #00f59b;
+            animation: pulse 1.5s infinite;
+        }
+        .live-badge.connecting {
+            border-color: #ffcc00;
+            color: #ffcc00;
+            background: rgba(255, 204, 0, 0.15);
+        }
+        .live-badge.connecting .status-dot {
+            background-color: #ffcc00;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .hud-info {
+            font-size: 11px;
+            font-family: monospace;
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(0,0,0,0.5);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .hud-info span {
+            color: #00f59b;
+            font-weight: bold;
+        }
+
+        /* Viewport / Frame */
+        .camera-viewport {
             position: relative;
-            width: 100vw;
-            height: 100vh;
+            flex: 1;
+            width: 100%;
+            height: 100%;
             background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #ninja-frame {
@@ -37,181 +116,187 @@
             background: #000;
         }
 
-        /* Header HUD แสดงสถานะแบบเรียบหรู */
-        .hud-header {
+        /* Composition Grid Overlay */
+        .grid-overlay {
             position: absolute;
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 20;
+            inset: 0;
             pointer-events: none;
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            z-index: 10;
+        }
+        .grid-overlay.active {
+            display: grid;
+        }
+        .grid-box {
+            border: 0.5px solid rgba(255, 255, 255, 0.15);
         }
 
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(0, 0, 0, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 800;
-            backdrop-filter: blur(10px);
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #71717a;
-        }
-
-        .status-badge.online {
-            border-color: #00f59b;
-            color: #00f59b;
-            background: rgba(0, 245, 155, 0.15);
-        }
-        .status-badge.online .status-dot {
-            background-color: #00f59b;
-            box-shadow: 0 0 10px #00f59b;
-            animation: pulse 1.5s infinite;
-        }
-
-        .status-badge.connecting {
-            border-color: #ffcc00;
-            color: #ffcc00;
-            background: rgba(255, 204, 0, 0.15);
-        }
-        .status-badge.connecting .status-dot {
-            background-color: #ffcc00;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.8; }
-        }
-
-        .stream-id-tag {
-            font-size: 11px;
-            font-family: monospace;
-            color: #efeff1;
-            background: rgba(0, 0, 0, 0.65);
-            padding: 6px 12px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-        }
-        .stream-id-tag span {
-            color: #00f59b;
-            font-weight: bold;
-        }
-
-        /* Floating Quick Action Buttons ฝั่งขวาลงมา */
-        .controls-overlay {
-            position: absolute;
-            bottom: 24px;
-            right: 16px;
+        /* Bottom Control Deck */
+        .hud-bottom {
+            background: rgba(12, 12, 15, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px 20px 16px;
             display: flex;
             flex-direction: column;
             gap: 12px;
             z-index: 20;
+            backdrop-filter: blur(12px);
         }
 
-        .btn-quick {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: rgba(20, 20, 25, 0.75);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            font-size: 20px;
+        /* Audio VU Meter Bar */
+        .vu-meter-container {
+            width: 100%;
+            height: 4px;
+            background: #1a1a20;
+            border-radius: 2px;
+            overflow: hidden;
             display: flex;
+        }
+        .vu-meter-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #00f59b 70%, #ffcc00 85%, #ff4b4b 100%);
+            transition: width 0.1s ease;
+        }
+
+        /* Control Buttons Grid */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-cam {
+            background: #1c1c24;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border-radius: 12px;
+            height: 58px;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
             cursor: pointer;
-            backdrop-filter: blur(8px);
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.15s ease;
         }
-        .btn-quick:active {
-            transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.2);
+        .btn-cam:active {
+            transform: scale(0.92);
+            background: #2a2a35;
         }
-        .btn-quick.danger {
-            background: rgba(255, 75, 75, 0.3);
+        .btn-cam .icon {
+            font-size: 18px;
+        }
+        .btn-cam.active {
+            background: rgba(0, 245, 155, 0.15);
+            border-color: #00f59b;
+            color: #00f59b;
+        }
+        .btn-cam.danger {
+            background: rgba(255, 75, 75, 0.15);
             border-color: #ff4b4b;
             color: #ff4b4b;
         }
 
-        /* Notice Popup ในกรณีที่เบราว์เซอร์ติดบล็อกสิทธิ์กล้อง */
-        .permission-fallback {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            text-align: center;
-            z-index: 100;
-        }
-        .permission-fallback h2 {
-            font-size: 18px;
-            color: #00f59b;
-            margin-bottom: 8px;
-        }
-        .permission-fallback p {
-            font-size: 13px;
-            color: #adadb8;
-            margin-bottom: 20px;
-        }
-        .btn-start-manual {
-            background: #00f59b;
-            color: #000;
+        .btn-cam.primary {
+            background: #9146ff;
             border: none;
-            padding: 12px 28px;
-            border-radius: 30px;
+            color: #ffffff;
+        }
+        .btn-cam.primary:active {
+            background: #772ce8;
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #00f59b;
+            color: #00f59b;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 11px;
             font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 30;
+        }
+        .toast.show {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
 
-    <!-- Fallback หน้าปลดล็อกสิทธิ์กล้อง หากเบราว์เซอร์บล็อก Auto-play -->
-    <div class="permission-fallback" id="permission-box">
-        <h2>📷 อนุญาตใช้งานกล้อง</h2>
-        <p>แตะปุ่มด้านล่างเพื่อเริ่มถ่ายทอดสดไปยัง OBS</p>
-        <button class="btn-start-manual" onclick="forceStartCamera()">กดเปิดกล้องทันที</button>
+    <!-- Notification Toast -->
+    <div class="toast" id="toast">แชร์กล้องทันที...</div>
+
+    <!-- Top HUD Bar -->
+    <div class="hud-top">
+        <div class="live-badge" id="live-badge">
+            <div class="status-dot"></div>
+            <span id="live-text">AUTO START...</span>
+        </div>
+        <div class="hud-info">
+            ID: <span id="hud-stream-id">...</span>
+        </div>
     </div>
 
-    <div class="camera-container">
-        <!-- Top HUD -->
-        <div class="hud-header">
-            <div class="status-badge" id="status-badge">
-                <div class="status-dot"></div>
-                <span id="status-text">กำลังเชื่อมต่อ...</span>
-            </div>
-            <div class="stream-id-tag">
-                ID: <span id="display-stream-id">...</span>
-            </div>
+    <!-- Camera Viewport -->
+    <div class="camera-viewport">
+        <!-- 3x3 Grid Lines -->
+        <div class="grid-overlay" id="grid-overlay">
+            <div class="grid-box"></div><div class="grid-box"></div><div class="grid-box"></div>
+            <div class="grid-box"></div><div class="grid-box"></div><div class="grid-box"></div>
+            <div class="grid-box"></div><div class="grid-box"></div><div class="grid-box"></div>
         </div>
 
-        <!-- WebRTC Stream Iframe -->
+        <!-- iframe VDO.Ninja สั่ง Auto-start & Push ทันที -->
         <iframe id="ninja-frame" allow="camera; microphone; autoplay; display-capture; flashlight;"></iframe>
+    </div>
 
-        <!-- Quick Floating Action Buttons -->
-        <div class="controls-overlay">
-            <button class="btn-quick" id="btn-flip" onclick="switchCamera()" title="สลับกล้อง">🔄</button>
-            <button class="btn-quick" id="btn-mic" onclick="toggleMic()" title="ปิด/เปิดไมค์">🎙️</button>
-            <button class="btn-quick" id="btn-torch" onclick="toggleTorch()" title="แฟลช">💡</button>
+    <!-- Bottom Control Deck -->
+    <div class="hud-bottom">
+        <!-- Audio VU Meter Bar -->
+        <div class="vu-meter-container">
+            <div class="vu-meter-bar" id="vu-bar"></div>
+        </div>
+
+        <!-- Camera Controls -->
+        <div class="controls-grid">
+            <button class="btn-cam" id="btn-mic" onclick="toggleMic()">
+                <span class="icon" id="icon-mic">🎙️</span>
+                <span id="label-mic">ไมค์</span>
+            </button>
+
+            <button class="btn-cam" id="btn-video" onclick="toggleVideo()">
+                <span class="icon" id="icon-video">📹</span>
+                <span id="label-video">ภาพ</span>
+            </button>
+
+            <button class="btn-cam primary" onclick="switchCamera()">
+                <span class="icon">🔄</span>
+                <span>สลับกล้อง</span>
+            </button>
+
+            <button class="btn-cam" id="btn-torch" onclick="toggleTorch()">
+                <span class="icon">💡</span>
+                <span>แฟลช</span>
+            </button>
+
+            <button class="btn-cam" id="btn-grid" onclick="toggleGrid()">
+                <span class="icon">🌐</span>
+                <span>เส้นตาราง</span>
+            </button>
         </div>
     </div>
 
@@ -219,21 +304,27 @@
         let streamId = "";
         let quality = "0";
         let isMuted = false;
+        let isVideoOff = false;
+        let isGridOn = false;
         let wakeLock = null;
 
-        function getParams() {
+        function parseParams() {
             const urlParams = new URLSearchParams(window.location.search);
             streamId = urlParams.get('push') || ('cam_' + Math.random().toString(36).substring(2, 6));
             quality = urlParams.get('quality') || '0';
 
-            document.getElementById('display-stream-id').innerText = streamId;
+            document.getElementById('hud-stream-id').innerText = streamId;
         }
 
-        function autoStartCamera() {
-            getParams();
+        function initStream() {
+            parseParams();
 
-            // พารามิเตอร์สำคัญ: autostart=1 & push=... ช่วยให้สแกนแล้วต่อภาพเข้า OBS ทันทีโดยไม่ต้องกดรับรอง
-            let ninjaUrl = `https://vdo.ninja/?push=${streamId}&autostart=1&autoplay=1&api=1&postmessage=1&cleanoutput=1`;
+            // พารามิเตอร์สำคัญเพื่อให้เริ่มกล้อง/ไมค์ทันทีไม่ต้องกดปุ่ม:
+            // &autostart=1  -> เริ่มเปิดกล้อง+ไมค์ทันที
+            // &autoplay=1   -> เล่นวิดีโอทันที
+            // &push=ID      -> ส่งสัญญาณเข้า Stream ID
+            // &cleanoutput=1 -> ปิดปุ่มเมนูเกะกะ
+            let ninjaUrl = `https://vdo.ninja/?push=${streamId}&autostart=1&autoplay=1&cleanoutput=1&api=1&postmessage=1&label=Mobile_Cam&meter=1`;
 
             if (quality === '0') {
                 ninjaUrl += `&quality=0&proaudio=1`;
@@ -243,28 +334,11 @@
                 ninjaUrl += `&quality=2&mbitrate=1200`;
             }
 
-            const iframe = document.getElementById('ninja-frame');
-            iframe.src = ninjaUrl;
-
-            // ตรวจสอบ permission กล้องเบื้องต้น
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                    .then(() => {
-                        document.getElementById('permission-box').style.display = 'none';
-                    })
-                    .catch((err) => {
-                        console.warn("Auto permission failed:", err);
-                        document.getElementById('permission-box').style.display = 'flex';
-                    });
-            }
+            document.getElementById('ninja-frame').src = ninjaUrl;
+            updateBadge('connecting', 'STARTING CAM...');
         }
 
-        function forceStartCamera() {
-            document.getElementById('permission-box').style.display = 'none';
-            autoStartCamera();
-        }
-
-        // ดักจับสถานะจาก VDO.Ninja
+        // ฟัง Event และระดับเสียงจาก VDO.Ninja
         window.addEventListener('message', function(e) {
             if (!e.data) return;
 
@@ -273,16 +347,23 @@
                 try { data = JSON.parse(e.data); } catch(err) { return; }
             }
 
+            // รับค่าระดับเสียงจากไมค์ (Audio Volume Meter)
+            if (data.action === 'volume') {
+                const volumePercent = Math.min(100, Math.max(0, data.value * 100));
+                document.getElementById('vu-bar').style.width = isMuted ? '0%' : volumePercent + '%';
+            }
+
+            // รับสถานะการเชื่อมต่อ
             if (data.action === 'state') {
                 if (data.value === 'connected' || data.value === 'playing') {
-                    setStatus('online', '🔴 LIVE');
+                    updateBadge('online', 'LIVE');
                 } else if (data.value === 'connecting') {
-                    setStatus('connecting', 'กำลังเชื่อมต่อ...');
+                    updateBadge('connecting', 'CONNECTING...');
                 }
             } else if (data.action === 'rtc_connected') {
-                setStatus('online', '🔴 LIVE (OBS CONNECTED)');
+                updateBadge('online', 'OBS CONNECTED');
             } else if (data.action === 'rtc_disconnected') {
-                setStatus('connecting', 'กำลังต่อใหม่...');
+                updateBadge('connecting', 'RECONNECTING...');
             }
         });
 
@@ -293,36 +374,87 @@
             }
         }
 
-        function switchCamera() {
-            sendCommand({ action: 'changeCamera' });
-        }
-
         function toggleMic() {
             isMuted = !isMuted;
             sendCommand({ action: 'mute', value: isMuted });
+
             const btn = document.getElementById('btn-mic');
+            const icon = document.getElementById('icon-mic');
+            const label = document.getElementById('label-mic');
+
             if (isMuted) {
-                btn.innerText = '🔇';
                 btn.classList.add('danger');
+                icon.innerText = '🔇';
+                label.innerText = 'ปิดแล้ว';
+                document.getElementById('vu-bar').style.width = '0%';
             } else {
-                btn.innerText = '🎙️';
                 btn.classList.remove('danger');
+                icon.innerText = '🎙️';
+                label.innerText = 'ไมค์';
             }
+            showToast(isMuted ? "ปิดไมค์แล้ว" : "เปิดไมค์แล้ว");
+        }
+
+        function toggleVideo() {
+            isVideoOff = !isVideoOff;
+            sendCommand({ action: 'videoMute', value: isVideoOff });
+
+            const btn = document.getElementById('btn-video');
+            const icon = document.getElementById('icon-video');
+            const label = document.getElementById('label-video');
+
+            if (isVideoOff) {
+                btn.classList.add('danger');
+                icon.innerText = '📷❌';
+                label.innerText = 'พักภาพ';
+            } else {
+                btn.classList.remove('danger');
+                icon.innerText = '📹';
+                label.innerText = 'ภาพ';
+            }
+            showToast(isVideoOff ? "ปิดภาพชั่วคราว" : "เปิดภาพแล้ว");
+        }
+
+        function switchCamera() {
+            sendCommand({ action: 'changeCamera' });
+            showToast("สลับกล้องแล้ว");
         }
 
         function toggleTorch() {
             sendCommand({ action: 'toggleTorch' });
+            showToast("เปิด/ปิด แฟลช");
         }
 
-        function setStatus(type, text) {
-            const badge = document.getElementById('status-badge');
-            const statusText = document.getElementById('status-text');
+        function toggleGrid() {
+            isGridOn = !isGridOn;
+            const grid = document.getElementById('grid-overlay');
+            const btn = document.getElementById('btn-grid');
 
-            badge.className = 'status-badge ' + type;
-            statusText.innerText = text;
+            if (isGridOn) {
+                grid.classList.add('active');
+                btn.classList.add('active');
+            } else {
+                grid.classList.remove('active');
+                btn.classList.remove('active');
+            }
         }
 
-        // เปิดโหมดป้องกันหน้าจอดับ (Screen Wake Lock)
+        function updateBadge(status, text) {
+            const badge = document.getElementById('live-badge');
+            const label = document.getElementById('live-text');
+
+            badge.className = 'live-badge ' + status;
+            label.innerText = text;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1800);
+        }
+
+        // ล็อกหน้าจอไม่ให้ดับขณะสตรีม
         async function enableWakeLock() {
             try {
                 if ('wakeLock' in navigator) {
@@ -332,7 +464,7 @@
         }
 
         window.onload = function() {
-            autoStartCamera();
+            initStream();
             enableWakeLock();
         };
     </script>
