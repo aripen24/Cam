@@ -1,291 +1,271 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mobile Cam Sender</title>
-<script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<style>
-:root {
-    --accent: #3b82f6;
-    --green: #22c55e;
-    --red: #ef4444;
-    --glass: rgba(18, 19, 24, 0.70);
-    --border: rgba(255, 255, 255, 0.15);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; }
-.viewport { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; background: #000; }
-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
-.grid-overlay { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); pointer-events: none; opacity: 0; transition: opacity .3s ease; z-index: 3; }
-.grid-overlay.active { opacity: 1; }
-.grid-cell { border: .5px solid rgba(255, 255, 255, .28); }
-.status-bar { position: absolute; top: 16px; left: 16px; display: flex; gap: 9px; align-items: center; background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--border); padding: 7px 13px; border-radius: 22px; font-size: .70rem; z-index: 30; }
-.live-dot { width: 8px; height: 8px; background: #666; border-radius: 50%; }
-.live-dot.connected { background: var(--green); animation: blink 1.5s infinite; }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
-.control-dock { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 11px; background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--border); padding: 12px 10px; border-radius: 28px; z-index: 30; }
-.btn-action { width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .10); color: #fff; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all .2s ease; }
-.btn-action:active { transform: scale(.9); background: rgba(255, 255, 255, .2); }
-.btn-action.active { background: var(--accent); border-color: var(--accent); }
-.popup { position: absolute; right: 80px; top: 50%; transform: translateY(-50%); background: rgba(18, 19, 24, .96); backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 18px; padding: 15px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
-.popup.show { opacity: 1; pointer-events: auto; }
-.resolution-popup { width: 205px; }
-.popup-title { font-size: .80rem; font-weight: 600; margin-bottom: 10px; }
-.select-box { width: 100%; padding: 10px; border-radius: 11px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .07); color: #fff; outline: none; font-size: .78rem; }
-.select-box option { background: #18191f; color: #fff; }
-.zoom-popup { width: 58px; height: 190px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.zoom-popup input { writing-mode: vertical-lr; direction: rtl; width: 6px; height: 125px; accent-color: var(--accent); }
-.zoom-value { font-size: .68rem; }
-.loading { position: absolute; inset: 0; background: rgba(0, 0, 0, .6); backdrop-filter: blur(3px); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .2s; }
-.loading.show { opacity: 1; pointer-events: auto; }
-.spinner { width: 38px; height: 38px; border: 3px solid rgba(255, 255, 255, .2); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-text { font-size: .78rem; color: rgba(255, 255, 255, .85); }
-.error-box { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(90%, 380px); background: rgba(20, 20, 24, .97); border: 1px solid rgba(255, 255, 255, .12); border-radius: 18px; padding: 20px; text-align: center; z-index: 120; display: none; }
-.error-box.show { display: block; }
-.error-box h3 { font-size: 1rem; margin-bottom: 8px; }
-.error-box p { font-size: .76rem; line-height: 1.5; color: rgba(255, 255, 255, .6); margin-bottom: 15px; }
-.retry { border: 0; padding: 10px 18px; border-radius: 10px; background: var(--accent); color: #fff; cursor: pointer; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OBS Ninja Mobile Camera Sender</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+        }
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            background: #000;
+        }
+        .overlay {
+            position: relative;
+            z-index: 10;
+            padding: 16px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ff4444;
+        }
+        .dot.active {
+            background-color: #00f59b;
+            box-shadow: 0 0 8px #00f59b;
+        }
+        .controls-bottom {
+            position: relative;
+            z-index: 10;
+            padding: 20px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .btn-action {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 50%;
+            width: 54px;
+            height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-action:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.3);
+        }
+        #ninja-iframe {
+            display: none;
+        }
+        .info-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            width: 80%;
+            max-width: 320px;
+        }
+        .info-panel h2 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #00f59b;
+        }
+        .info-panel p {
+            margin: 4px 0;
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="viewport">
-    <video id="webcam-preview" autoplay playsinline muted></video>
+    <div class="container">
+        <!-- Overlay ด้านบน -->
+        <div class="overlay">
+            <div class="status-badge">
+                <div class="dot" id="status-dot"></div>
+                <span id="status-text">กำลังเชื่อมต่อ...</span>
+            </div>
+            <div class="status-badge" id="stream-id-display">ID: ---</div>
+        </div>
 
-    <div class="grid-overlay" id="grid-overlay">
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+        <!-- หน้าจอพรีวิวกล้องฝั่งมือถือ -->
+        <video id="preview" autoplay playsinline muted></video>
+
+        <!-- ข้อความแจ้งเตือนกลางจอ -->
+        <div class="info-panel" id="info-panel">
+            <h2>📱 พร้อมถ่ายทอดสด</h2>
+            <p id="mode-text">กำลังโหลดการตั้งค่า...</p>
+            <p style="font-size: 10px; color: #888; margin-top: 10px;">กดปุ่มอนุญาตสิทธิ์กล้อง/ไมค์ หากมีป๊อปอัปเด้งขึ้นมา</p>
+        </div>
+
+        <!-- แถบปุ่มควบคุมด้านล่าง -->
+        <div class="controls-bottom">
+            <button class="btn-action" onclick="toggleCamera()" title="สลับกล้อง หน้า/หลัง">🔄</button>
+            <button class="btn-action" onclick="toggleMute()" id="mute-btn" title="เปิด/ปิด ไมค์">🎙️</button>
+        </div>
     </div>
 
-    <div class="status-bar">
-        <div class="live-dot" id="live-dot"></div>
-        <span id="conn-text">WAITING OBS</span>
-        <span style="opacity:.4">|</span>
-        <span id="resolution-status">1080p</span>
-        <span style="opacity:.4">|</span>
-        <span id="stream-id-display">ID: ...</span>
-    </div>
+    <!-- IFrame ซ่อนสำหรับรันระบบ VDO.Ninja ด้านหลัง -->
+    <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
 
-    <div class="popup zoom-popup" id="zoom-popup">
-        <span class="zoom-value" id="zoom-value">1.0x</span>
-        <input type="range" id="zoom-range" min="1" max="5" step=".1" value="1">
-        <i data-lucide="zoom-in" width="14" height="14"></i>
-    </div>
+    <script>
+        let currentFacingMode = 'environment'; // เริ่มต้นใช้กล้องหลัง
+        let isMuted = false;
+        let localStream = null;
 
-    <div class="popup resolution-popup" id="resolution-popup">
-        <div class="popup-title">ความละเอียดกล้อง</div>
-        <select id="resolution-select" class="select-box">
-            <option value="3840x2160">4K — 3840 × 2160</option>
-            <option value="2560x1440">2K — 2560 × 1440</option>
-            <option value="1920x1080" selected>Full HD — 1920 × 1080</option>
-            <option value="1280x720">HD — 1280 × 720</option>
-            <option value="854x480">SD — 854 × 480</option>
-        </select>
-    </div>
+        // ดึงค่า URL Parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const pushId = urlParams.get('push');
+        const quality = urlParams.get('quality') || '0';
 
-    <div class="control-dock">
-        <button class="btn-action" id="btn-grid" title="Grid"><i data-lucide="grid-3x3" width="20"></i></button>
-        <button class="btn-action" id="btn-zoom" title="Zoom"><i data-lucide="search" width="20"></i></button>
-        <button class="btn-action" id="btn-focus" title="Focus"><i data-lucide="focus" width="20"></i></button>
-        <button class="btn-action" id="btn-flash" title="Flash"><i data-lucide="zap" width="20"></i></button>
-        <button class="btn-action" id="btn-flip" title="Flip"><i data-lucide="switch-camera" width="20"></i></button>
-        <button class="btn-action" id="btn-resolution" title="Resolution"><i data-lucide="monitor" width="20"></i></button>
-    </div>
+        document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Unknown'}`;
 
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loading-text">กำลังเริ่มต้นกล้อง...</div>
-    </div>
-
-    <div class="error-box" id="error-box">
-        <h3>ไม่สามารถเปิดกล้องได้</h3>
-        <p id="error-text">กรุณาตรวจสอบสิทธิ์กล้อง</p>
-        <button class="retry" id="retry">ลองใหม่</button>
-    </div>
-</div>
-
-<script>
-let currentStream = null;
-let videoTrack = null;
-let facingMode = "environment";
-let isFocusLocked = false;
-let isFlashOn = false;
-let peer = null;
-
-const urlParams = new URLSearchParams(window.location.search);
-const pushId = urlParams.get('push') || "cam_default";
-
-const video = document.getElementById("webcam-preview");
-const loading = document.getElementById("loading");
-const loadingText = document.getElementById("loading-text");
-const errorBox = document.getElementById("error-box");
-const errorText = document.getElementById("error-text");
-const resolutionSelect = document.getElementById("resolution-select");
-const resolutionStatus = document.getElementById("resolution-status");
-const zoomRange = document.getElementById("zoom-range");
-const zoomValue = document.getElementById("zoom-value");
-const zoomPopup = document.getElementById("zoom-popup");
-const resolutionPopup = document.getElementById("resolution-popup");
-const liveDot = document.getElementById("live-dot");
-const connText = document.getElementById("conn-text");
-
-document.getElementById('stream-id-display').textContent = pushId;
-
-const resolutions = {
-    "3840x2160": { width: 3840, height: 2160 },
-    "2560x1440": { width: 2560, height: 1440 },
-    "1920x1080": { width: 1920, height: 1080 },
-    "1280x720":  { width: 1280, height: 720 },
-    "854x480":   { width: 854,  height: 480 }
-};
-
-async function initCamera(){
-    try {
-        errorBox.classList.remove("show");
-        showLoading("กำลังเปิดกล้อง...");
-        stopCamera();
-
-        const resolution = resolutions[resolutionSelect.value] || resolutions["1920x1080"];
-        const constraints = {
-            video: {
-                facingMode: { ideal: facingMode },
-                width: { ideal: resolution.width },
-                height: { ideal: resolution.height },
-                frameRate: { ideal: 60, max: 60 }
-            },
-            audio: false
-        };
-
-        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = currentStream;
-        videoTrack = currentStream.getVideoTracks()[0];
-
-        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
-        if(settings.width && settings.height){
-            resolutionStatus.textContent = `${settings.height}p`;
+        // โหมดคุณภาพตามที่รับมาจาก Dock
+        function getQualitySettings(q) {
+            if (q === '0') {
+                return { label: '🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำ)', bitrate: 6000, maxfps: 60 };
+            } else if (q === '1') {
+                return { label: '📶 Wi-Fi Mode (เสถียร / สมดุล)', bitrate: 3500, maxfps: 30 };
+            } else {
+                return { label: '📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)', bitrate: 1500, maxfps: 30 };
+            }
         }
 
-        initWebRTC();
-        hideLoading();
-    } catch(err) {
-        console.error(err);
-        hideLoading();
-        errorText.textContent = "เปิดกล้องไม่สำเร็จ: " + err.message;
-        errorBox.classList.add("show");
-    }
-}
+        const qSettings = getQualitySettings(quality);
+        document.getElementById('mode-text').innerText = qSettings.label;
 
-function stopCamera(){
-    if(currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-        currentStream = null;
-        videoTrack = null;
-    }
-}
+        // เริ่มต้นขอสิทธิ์เปิดกล้องพรีวิวในหน้ามือถือ
+        async function startCamera() {
+            try {
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
 
-function initWebRTC() {
-    if (peer) peer.destroy();
-    
-    // เชื่อมต่อผ่าน PeerJS Server ฟรี
-    peer = new Peer(pushId);
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode },
+                    audio: true
+                });
 
-    peer.on('open', (id) => {
-        connText.textContent = "READY FOR OBS";
-    });
+                const videoElement = document.getElementById('preview');
+                videoElement.srcObject = localStream;
 
-    // เมื่อมี OBS ติดต่อเข้ามาขอดูวิดีโอ
-    peer.on('call', (call) => {
-        call.answer(currentStream);
-        liveDot.classList.add("connected");
-        connText.textContent = "LIVE TO OBS";
+                // อัปเดตสถานะเมื่อกล้องติดแล้ว
+                document.getElementById('status-dot').classList.add('active');
+                document.getElementById('status-text').innerText = 'LIVE ONLINE';
+                
+                // ซ่อนกรอบข้อความหลังจากเปิดกล้องสำเร็จ 3 วินาที
+                setTimeout(() => {
+                    document.getElementById('info-panel').style.opacity = '0';
+                    document.getElementById('info-panel').style.transition = 'opacity 0.5s';
+                }, 3000);
 
-        call.on('close', () => {
-            liveDot.classList.remove("connected");
-            connText.textContent = "WAITING OBS";
-        });
-    });
+                // โหลด VDO.Ninja Engine เข้าไปใน iframe
+                loadNinjaEngine();
 
-    peer.on('error', (err) => {
-        console.error("PeerJS Error:", err);
-    });
-}
+            } catch (err) {
+                console.error("Camera access error:", err);
+                document.getElementById('status-text').innerText = 'เกิดข้อผิดพลาดในการเปิดกล้อง';
+                alert('ไม่สามารถเข้าถึงกล้องหรือไมโครโฟนได้ กรุณาอนุญาตสิทธิ์ในเบราว์เซอร์');
+            }
+        }
 
-function showLoading(text){
-    loadingText.textContent = text;
-    loading.classList.add("show");
-}
+        // โหลด VDO.Ninja สำหรับส่งสัญญาณภาพไป OBS
+        function loadNinjaEngine() {
+            if (!pushId) return;
 
-function hideLoading(){
-    loading.classList.remove("show");
-}
+            let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput`;
+            
+            // ใส่พารามิเตอร์คุณภาพตามที่เลือกจาก Dock
+            ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}`;
+            
+            if (currentFacingMode === 'environment') {
+                ninjaUrl += `&facing=back`;
+            } else {
+                ninjaUrl += `&facing=front`;
+            }
 
-// Controller Actions
-document.getElementById("btn-grid").onclick = function(){
-    document.getElementById("grid-overlay").classList.toggle("active");
-    this.classList.toggle("active");
-};
+            const iframe = document.getElementById('ninja-iframe');
+            iframe.src = ninjaUrl;
+        }
 
-document.getElementById("btn-zoom").onclick = function(){
-    zoomPopup.classList.toggle("show");
-    resolutionPopup.classList.remove("show");
-    this.classList.toggle("active", zoomPopup.classList.contains("show"));
-};
+        // สลับกล้องหน้า / หลัง
+        function toggleCamera() {
+            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+            startCamera();
+        }
 
-zoomRange.oninput = async function(){
-    const value = Number(this.value);
-    zoomValue.textContent = value.toFixed(1) + "x";
-    if(videoTrack && videoTrack.applyConstraints){
-        try { await videoTrack.applyConstraints({ advanced: [{ zoom: value }] }); } catch(e){}
-    }
-};
+        // เปิด / ปิด ไมโครโฟน
+        function toggleMute() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    isMuted = !isMuted;
+                    audioTrack.enabled = !isMuted;
+                    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🎙️';
+                    document.getElementById('mute-btn').style.background = isMuted ? 'rgba(255,0,0,0.5)' : 'rgba(255,255,255,0.15)';
+                }
+            }
+        }
 
-document.getElementById("btn-focus").onclick = async function(){
-    isFocusLocked = !isFocusLocked;
-    this.classList.toggle("active", isFocusLocked);
-    if(videoTrack && videoTrack.applyConstraints){
-        try { await videoTrack.applyConstraints({ advanced: [{ focusMode: isFocusLocked ? "manual" : "continuous" }] }); } catch(e){}
-    }
-};
-
-document.getElementById("btn-flash").onclick = async function(){
-    if(!videoTrack) return;
-    try {
-        isFlashOn = !isFlashOn;
-        await videoTrack.applyConstraints({ advanced: [{ torch: isFlashOn }] });
-        this.classList.toggle("active", isFlashOn);
-    } catch(err) {
-        alert("กล้องนี้ไม่รองรับ Flash");
-    }
-};
-
-document.getElementById("btn-flip").onclick = async function(){
-    facingMode = facingMode === "user" ? "environment" : "user";
-    await initCamera();
-};
-
-document.getElementById("btn-resolution").onclick = function(){
-    resolutionPopup.classList.toggle("show");
-    zoomPopup.classList.remove("show");
-    this.classList.toggle("active", resolutionPopup.classList.contains("show"));
-};
-
-resolutionSelect.onchange = function(){
-    resolutionPopup.classList.remove("show");
-    initCamera();
-};
-
-document.getElementById("retry").onclick = initCamera;
-
-window.onload = function(){
-    lucide.createIcons();
-    initCamera();
-};
-</script>
-
+        // เริ่มทำงานเมื่อเปิดหน้าเว็บ
+        window.onload = () => {
+            if (!pushId) {
+                alert('ไม่พบ Stream ID! กรุณาสแกน QR Code ใหม่อีกครั้งจาก OBS Dock');
+                document.getElementById('status-text').innerText = 'NO STREAM ID';
+                return;
+            }
+            startCamera();
+        };
+    </script>
 </body>
 </html>
