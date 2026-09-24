@@ -3,24 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OBS Ninja Mobile Camera Sender</title>
+    <title>OBS Ninja Mobile Camera Sender Pro</title>
     <style>
+        :root {
+            --primary: #00f59b;
+            --danger: #ff4444;
+            --bg-dark: rgba(10, 10, 15, 0.75);
+            --border-light: rgba(255, 255, 255, 0.15);
+        }
+
         * {
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
-        }
-        body, html {
             margin: 0;
             padding: 0;
+        }
+
+        body, html {
             width: 100%;
             height: 100%;
-            background-color: #000000;
-            color: #ffffff;
+            background-color: #000;
+            color: #fff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             overflow: hidden;
         }
-        .container {
+
+        .app-container {
             position: relative;
             width: 100%;
             height: 100%;
@@ -28,64 +37,172 @@
             flex-direction: column;
             justify-content: space-between;
         }
-        video {
+
+        /* IFrame VDO.Ninja (เบื้องหลัง) */
+        #ninja-iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            border: none;
             z-index: 1;
-            background: #000;
         }
-        .overlay {
+
+        /* UI Overlays */
+        .overlay-top, .overlay-bottom, .side-controls {
             position: relative;
             z-index: 10;
-            padding: 16px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+        }
+
+        /* Header / Top Overlay */
+        .overlay-top {
+            padding: 12px 16px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+
+        .badge-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
         .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--bg-dark);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
             padding: 6px 12px;
             border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
+
         .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background-color: #ff4444;
+            background-color: #888;
+            transition: background-color 0.3s;
         }
+
         .dot.active {
-            background-color: #00f59b;
-            box-shadow: 0 0 8px #00f59b;
+            background-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
         }
-        .controls-bottom {
-            position: relative;
+
+        .dot.live {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        /* Telemetry Dashboard */
+        .telemetry-bar {
+            position: absolute;
+            top: 55px;
+            left: 16px;
             z-index: 10;
-            padding: 20px;
-            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            background: var(--bg-dark);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 10px;
+            font-family: monospace;
+            display: flex;
+            gap: 12px;
+            color: #aaa;
+        }
+        .telemetry-bar span b { color: #fff; }
+
+        /* Camera Sliders Side Panel */
+        .side-controls {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: var(--bg-dark);
+            backdrop-filter: blur(10px);
+            padding: 12px 8px;
+            border-radius: 16px;
+            border: 1px solid var(--border-light);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .slider-group label {
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .slider-group input[type="range"] {
+            writing-mode: bt-lr; /* IE/Edge */
+            appearance: slider-vertical;
+            width: 20px;
+            height: 100px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* Bottom Controls */
+        .overlay-bottom {
+            padding: 16px 20px 24px 20px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .audio-control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-dark);
+            backdrop-filter: blur(8px);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+        }
+
+        .audio-control-row label { font-size: 12px; }
+        .audio-control-row input { flex: 1; accent-color: var(--primary); }
+
+        .btn-row {
             display: flex;
             justify-content: space-around;
             align-items: center;
         }
+
         .btn-action {
             background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
             color: white;
             border-radius: 50%;
-            width: 54px;
-            height: 54px;
+            width: 50px;
+            height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -93,178 +210,391 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .btn-action:active {
-            transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.3);
+
+        .btn-action:active { transform: scale(0.9); }
+        .btn-action.active { background: var(--primary); color: #000; }
+        .btn-action:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .btn-live {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: var(--danger);
+            border: 3px solid #fff;
+            font-weight: bold;
+            font-size: 12px;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(255, 68, 68, 0.5);
         }
-        #ninja-iframe {
-            display: none;
+        .btn-live.is-streaming {
+            background: #222;
+            border-color: var(--danger);
+            color: var(--danger);
         }
-        .info-panel {
+
+        /* Dynamic Info Banner */
+        .info-banner {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 5;
             text-align: center;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 20px;
-            border-radius: 12px;
-            backdrop-filter: blur(5px);
-            width: 80%;
-            max-width: 320px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-light);
+            width: 85%;
+            max-width: 340px;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
         }
-        .info-panel h2 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            color: #00f59b;
-        }
-        .info-panel p {
-            margin: 4px 0;
-            font-size: 12px;
-            color: #ccc;
-        }
+
+        .info-banner h2 { font-size: 16px; color: var(--primary); margin-bottom: 8px; }
+        .info-banner p { font-size: 12px; color: #ccc; margin: 3px 0; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div class="app-container">
         <!-- Overlay ด้านบน -->
-        <div class="overlay">
-            <div class="status-badge">
-                <div class="dot" id="status-dot"></div>
-                <span id="status-text">กำลังเชื่อมต่อ...</span>
+        <div class="overlay-top">
+            <div class="badge-group">
+                <div class="status-badge">
+                    <div class="dot" id="status-dot"></div>
+                    <span id="status-text">OFFLINE</span>
+                </div>
+                <div class="status-badge" style="color: var(--primary)" id="cam-name-display">CAM 1</div>
             </div>
             <div class="status-badge" id="stream-id-display">ID: ---</div>
         </div>
 
-        <!-- หน้าจอพรีวิวกล้องฝั่งมือถือ -->
-        <video id="preview" autoplay playsinline muted></video>
-
-        <!-- ข้อความแจ้งเตือนกลางจอ -->
-        <div class="info-panel" id="info-panel">
-            <h2>📱 พร้อมถ่ายทอดสด</h2>
-            <p id="mode-text">กำลังโหลดการตั้งค่า...</p>
-            <p style="font-size: 10px; color: #888; margin-top: 10px;">กดปุ่มอนุญาตสิทธิ์กล้อง/ไมค์ หากมีป๊อปอัปเด้งขึ้นมา</p>
+        <!-- แถบวัดค่า Telemetry -->
+        <div class="telemetry-bar">
+            <span>RES: <b id="stat-res">1080p</b></span>
+            <span>FPS: <b id="stat-fps">--</b></span>
+            <span>BITRATE: <b id="stat-bitrate">-- kbps</b></span>
         </div>
 
-        <!-- แถบปุ่มควบคุมด้านล่าง -->
-        <div class="controls-bottom">
-            <button class="btn-action" onclick="toggleCamera()" title="สลับกล้อง หน้า/หลัง">🔄</button>
-            <button class="btn-action" onclick="toggleMute()" id="mute-btn" title="เปิด/ปิด ไมค์">🎙️</button>
+        <!-- IFrame VDO.Ninja (รับผิดชอบ WebRTC, MediaStream) -->
+        <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
+
+        <!-- ปุ่มปรับ Zoom & Manual Focus สไลเดอร์ด้านข้าง -->
+        <div class="side-controls">
+            <div class="slider-group">
+                <label>ZOOM</label>
+                <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="applyZoom(this.value)">
+            </div>
+            <div class="slider-group">
+                <label>FOCUS</label>
+                <input type="range" id="focus-slider" min="0" max="100" step="1" value="0" disabled oninput="applyFocus(this.value)">
+            </div>
+        </div>
+
+        <!-- Info Banner กลางจอ -->
+        <div class="info-banner" id="info-banner">
+            <h2>📷 OBS Mobile Camera Pro</h2>
+            <p id="mode-text">กำลังโหลดการตั้งค่าระบบ...</p>
+            <p id="remote-text" style="color: #888; font-size: 10px; margin-top: 8px;">สแกนสิทธิ์กล้อง/ไมค์ หากมีแจ้งเตือน</p>
+        </div>
+
+        <!-- Overlay ด้านล่าง -->
+        <div class="overlay-bottom">
+            <!-- ปรับ Gain/ระดับเสียงไมค์ -->
+            <div class="audio-control-row">
+                <label>🎙️ MIC</label>
+                <input type="range" id="mic-gain" min="0" max="200" value="100" oninput="adjustMicVolume(this.value)">
+                <span id="mic-gain-val" style="font-size: 10px; width: 30px;">100%</span>
+            </div>
+
+            <!-- แถบปุ่มควบคุมหลัก -->
+            <div class="btn-row">
+                <button class="btn-action" id="torch-btn" onclick="toggleFlash()" title="เปิด/ปิด แฟลช" disabled>💡</button>
+                <button class="btn-action" id="cam-flip-btn" onclick="toggleCamera()" title="สลับกล้อง หน้า/หลัง">🔄</button>
+                
+                <!-- ปุ่ม Start / Stop LIVE -->
+                <button class="btn-live" id="live-btn" onclick="toggleLive()">START<br>LIVE</button>
+                
+                <button class="btn-action" id="mute-btn" onclick="toggleMute()" title="เปิด/ปิด ไมค์">🎙️</button>
+                <button class="btn-action" onclick="toggleSettings()" title="โหมดรีโมท">🔐</button>
+            </div>
         </div>
     </div>
 
-    <!-- IFrame ซ่อนสำหรับรันระบบ VDO.Ninja ด้านหลัง -->
-    <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
-
     <script>
-        let currentFacingMode = 'environment'; // เริ่มต้นใช้กล้องหลัง
+        // State variables
+        let isLive = false;
         let isMuted = false;
-        let localStream = null;
+        let isFlashOn = false;
+        let activeFacingMode = 'environment'; 
+        let videoTrack = null;
+        let capabilities = {};
 
-        // ดึงค่า URL Parameters
+        // URL Parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const pushId = urlParams.get('push');
+        const pushId = urlParams.get('push') || '';
         const quality = urlParams.get('quality') || '0';
+        const camName = urlParams.get('camname') || 'CAM 1';
+        const remotePasscode = urlParams.get('remote') || urlParams.get('pass') || 'obs123';
 
-        document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Unknown'}`;
+        // UI Initialization
+        document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Not Set'}`;
+        document.getElementById('cam-name-display').innerText = camName;
 
-        // โหมดคุณภาพตามที่รับมาจาก Dock
         function getQualitySettings(q) {
-            if (q === '0') {
-                return { label: '🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำ)', bitrate: 6000, maxfps: 60 };
-            } else if (q === '1') {
-                return { label: '📶 Wi-Fi Mode (เสถียร / สมดุล)', bitrate: 3500, maxfps: 30 };
-            } else {
-                return { label: '📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)', bitrate: 1500, maxfps: 30 };
-            }
+            if (q === '0') return { label: '🔌 USB Mode (บิตเรตสูงสุด / 60FPS)', bitrate: 6000, maxfps: 60, res: '1080' };
+            if (q === '1') return { label: '📶 Wi-Fi Mode (สมดุลเสถียร / 30FPS)', bitrate: 3500, maxfps: 30, res: '720' };
+            return { label: '📡 4G/5G Mode (ประหยัดข้อมูล)', bitrate: 1500, maxfps: 30, res: '540' };
         }
 
         const qSettings = getQualitySettings(quality);
         document.getElementById('mode-text').innerText = qSettings.label;
 
-        // เริ่มต้นขอสิทธิ์เปิดกล้องพรีวิวในหน้ามือถือ
-        async function startCamera() {
-            try {
-                if (localStream) {
-                    localStream.getTracks().forEach(track => track.stop());
-                }
+        const iframe = document.getElementById('ninja-iframe');
 
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode },
-                    audio: true
-                });
-
-                const videoElement = document.getElementById('preview');
-                videoElement.srcObject = localStream;
-
-                // อัปเดตสถานะเมื่อกล้องติดแล้ว
-                document.getElementById('status-dot').classList.add('active');
-                document.getElementById('status-text').innerText = 'LIVE ONLINE';
-                
-                // ซ่อนกรอบข้อความหลังจากเปิดกล้องสำเร็จ 3 วินาที
-                setTimeout(() => {
-                    document.getElementById('info-panel').style.opacity = '0';
-                    document.getElementById('info-panel').style.transition = 'opacity 0.5s';
-                }, 3000);
-
-                // โหลด VDO.Ninja Engine เข้าไปใน iframe
-                loadNinjaEngine();
-
-            } catch (err) {
-                console.error("Camera access error:", err);
-                document.getElementById('status-text').innerText = 'เกิดข้อผิดพลาดในการเปิดกล้อง';
-                alert('ไม่สามารถเข้าถึงกล้องหรือไมโครโฟนได้ กรุณาอนุญาตสิทธิ์ในเบราว์เซอร์');
-            }
-        }
-
-        // โหลด VDO.Ninja สำหรับส่งสัญญาณภาพไป OBS
-        function loadNinjaEngine() {
-            if (!pushId) return;
-
-            let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput`;
-            
-            // ใส่พารามิเตอร์คุณภาพตามที่เลือกจาก Dock
-            ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}`;
-            
-            if (currentFacingMode === 'environment') {
-                ninjaUrl += `&facing=back`;
-            } else {
-                ninjaUrl += `&facing=front`;
+        // 1. โหลด VDO.Ninja พร้อมส่งภาพจริงจาก getUserMedia() ผ่าน WebRTC Engine
+        function initNinjaEngine() {
+            if (!pushId) {
+                alert('ไม่พบ Push ID! กรุณาสแกน QR Code จาก OBS Control Center');
+                return;
             }
 
-            const iframe = document.getElementById('ninja-iframe');
+            // &remote=... เปิดระบบ ควบคุมระยะไกล รองรับ Control Center สั่งงาน
+            // &push=... ID สตรีม
+            // &webcam &autostart &cleanoutput ซ่อน UI Ninja ให้เหลือแค่ภาพดิบ
+            let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back`;
+            ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}&quality=${qSettings.res}`;
+            ninjaUrl += `&remote=${remotePasscode}&label=${encodeURIComponent(camName)}`;
+
             iframe.src = ninjaUrl;
         }
 
-        // สลับกล้องหน้า / หลัง
-        function toggleCamera() {
-            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
-            startCamera();
-        }
+        // 2. ฟังข้อความจาก VDO.Ninja (IFRAME API & Multi-Camera Control Center)
+        window.addEventListener('message', function(e) {
+            if (e.source !== iframe.contentWindow) return;
 
-        // เปิด / ปิด ไมโครโฟน
-        function toggleMute() {
-            if (localStream) {
-                const audioTrack = localStream.getAudioTracks()[0];
-                if (audioTrack) {
-                    isMuted = !isMuted;
-                    audioTrack.enabled = !isMuted;
-                    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🎙️';
-                    document.getElementById('mute-btn').style.background = isMuted ? 'rgba(255,0,0,0.5)' : 'rgba(255,255,255,0.15)';
+            try {
+                const data = JSON.parse(e.data);
+
+                // สถานะการเชื่อมต่อ
+                if (data.action === 'system') {
+                    if (data.value === 'connected') {
+                        document.getElementById('status-dot').className = 'dot active';
+                        document.getElementById('status-text').innerText = 'READY';
+                        setTimeout(() => document.getElementById('info-banner').style.opacity = '0', 3000);
+                        detectCameraCapabilities();
+                    }
                 }
+
+                // รับ Telemetry (FPS, Bitrate, Resolution)
+                if (data.action === 'stats') {
+                    if (data.fps) document.getElementById('stat-fps').innerText = Math.round(data.fps);
+                    if (data.bitrate) document.getElementById('stat-bitrate').innerText = `${data.bitrate} kbps`;
+                    if (data.height) document.getElementById('stat-res').innerText = `${data.height}p`;
+                }
+
+                // สั่งงานจาก Remote Control Center ข้ามอุปกรณ์ (Passcode)
+                if (data.action === 'remote_command') {
+                    handleRemoteControlCommand(data.cmd, data.val);
+                }
+
+            } catch (err) {
+                // Ignore non-json
+            }
+        });
+
+        // 3. ฟังก์ชันควบคุมสั่งงานไปยัง Iframe
+        function sendNinjaCommand(cmdObject) {
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage(JSON.stringify(cmdObject), '*');
             }
         }
 
-        // เริ่มทำงานเมื่อเปิดหน้าเว็บ
-        window.onload = () => {
-            if (!pushId) {
-                alert('ไม่พบ Stream ID! กรุณาสแกน QR Code ใหม่อีกครั้งจาก OBS Dock');
-                document.getElementById('status-text').innerText = 'NO STREAM ID';
-                return;
+        // 🔴 Start / Stop Live Toggle
+        function toggleLive() {
+            isLive = !isLive;
+            const btn = document.getElementById('live-btn');
+            const dot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            if (isLive) {
+                btn.classList.add('is-streaming');
+                btn.innerHTML = 'STOP<br>LIVE';
+                dot.className = 'dot live';
+                statusText.innerText = '🔴 LIVE';
+                sendNinjaCommand({ action: 'play' });
+            } else {
+                btn.classList.remove('is-streaming');
+                btn.innerHTML = 'START<br>LIVE';
+                dot.className = 'dot active';
+                statusText.innerText = 'ONLINE';
+                sendNinjaCommand({ action: 'pause' });
             }
-            startCamera();
+
+            // ส่งสถานะกลับไปยัง Control Center
+            broadcastStatusToControlCenter();
+        }
+
+        // 🚀 สลับกล้องแบบไร้รอยต่อ (ไร้ปัญหากล้องดับ)
+        function toggleCamera() {
+            document.getElementById('cam-flip-btn').disabled = true;
+            activeFacingMode = (activeFacingMode === 'environment') ? 'user' : 'environment';
+
+            // ส่ง API เปลี่ยนกล้องโดยตรงโดยไม่ต้อง Reload Iframe
+            sendNinjaCommand({ action: 'changeVideoTarget' });
+
+            setTimeout(() => {
+                detectCameraCapabilities();
+                document.getElementById('cam-flip-btn').disabled = false;
+            }, 1200);
+        }
+
+        // 💡 ตรวจสอบฮาร์ดแวร์ Flash / Zoom / Focus
+        async function detectCameraCapabilities() {
+            try {
+                // ดึง Track ภาพจริงที่เบราว์เซอร์ใช้งานอยู่
+                const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: activeFacingMode } 
+                });
+                videoTrack = mediaStream.getVideoTracks()[0];
+                capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+
+                // แฟลช
+                const torchBtn = document.getElementById('torch-btn');
+                if (capabilities.torch) {
+                    torchBtn.disabled = false;
+                } else {
+                    torchBtn.disabled = true;
+                    isFlashOn = false;
+                    torchBtn.classList.remove('active');
+                }
+
+                // Zoom
+                const zoomSlider = document.getElementById('zoom-slider');
+                if (capabilities.zoom) {
+                    zoomSlider.min = capabilities.zoom.min;
+                    zoomSlider.max = capabilities.zoom.max;
+                    zoomSlider.step = capabilities.zoom.step;
+                    zoomSlider.disabled = false;
+                }
+
+                // Focus
+                const focusSlider = document.getElementById('focus-slider');
+                if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
+                    focusSlider.disabled = false;
+                    if(capabilities.focusDistance) {
+                        focusSlider.min = capabilities.focusDistance.min;
+                        focusSlider.max = capabilities.focusDistance.max;
+                        focusSlider.step = capabilities.focusDistance.step;
+                    }
+                } else {
+                    focusSlider.disabled = true;
+                }
+
+            } catch (e) {
+                console.warn('Capability check non-critical error:', e);
+            }
+        }
+
+        // 💡 ปรับ Flash/Torch
+        async function toggleFlash() {
+            if (!videoTrack || !capabilities.torch) return;
+            isFlashOn = !isFlashOn;
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ torch: isFlashOn }]
+                });
+                document.getElementById('torch-btn').classList.toggle('active', isFlashOn);
+            } catch (err) {
+                console.error("Torch error:", err);
+            }
+        }
+
+        // 🔍 Zoom แบบ Smooth
+        async function applyZoom(val) {
+            if (!videoTrack || !capabilities.zoom) return;
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ zoom: parseFloat(val) }]
+                });
+            } catch (e) {}
+        }
+
+        // 🎯 Manual Focus Slider
+        async function applyFocus(val) {
+            if (!videoTrack) return;
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ focusMode: 'manual', focusDistance: parseFloat(val) }]
+                });
+            } catch (e) {}
+        }
+
+        // 🎙️ Mute / Unmute
+        function toggleMute() {
+            isMuted = !isMuted;
+            sendNinjaCommand({ action: 'mute', value: isMuted });
+            const btn = document.getElementById('mute-btn');
+            btn.innerText = isMuted ? '🔇' : '🎙️';
+            btn.classList.toggle('active', isMuted);
+        }
+
+        // 🔊 ปรับระดับเสียงไมค์ Gain
+        function adjustMicVolume(val) {
+            document.getElementById('mic-gain-val').innerText = `${val}%`;
+            const volumeNormalized = parseFloat(val) / 100.0;
+            // ส่งไปปรับ Gain โน้ตเพลง/ไมค์ ใน VDO.Ninja
+            sendNinjaCommand({ action: 'micGain', value: volumeNormalized });
+        }
+
+        // 🎛️ คำสั่งจาก OBS Multi Camera Control Center
+        function handleRemoteControlCommand(cmd, val) {
+            switch(cmd) {
+                case 'zoom':
+                    document.getElementById('zoom-slider').value = val;
+                    applyZoom(val);
+                    break;
+                case 'focus':
+                    document.getElementById('focus-slider').value = val;
+                    applyFocus(val);
+                    break;
+                case 'flip':
+                    toggleCamera();
+                    break;
+                case 'flash':
+                    toggleFlash();
+                    break;
+                case 'start_live':
+                    if(!isLive) toggleLive();
+                    break;
+                case 'stop_live':
+                    if(isLive) toggleLive();
+                    break;
+            }
+        }
+
+        // 🔄 ส่งสถานะกล้องไปยัง Control Center
+        function broadcastStatusToControlCenter() {
+            sendNinjaCommand({
+                action: 'send_custom_data',
+                value: {
+                    camName: camName,
+                    isLive: isLive,
+                    isMuted: isMuted,
+                    isFlashOn: isFlashOn,
+                    battery: navigator.getBattery ? 'supported' : 'unknown'
+                }
+            });
+        }
+
+        function toggleSettings() {
+            alert(`🔐 Remote Control Active\n\nCamera Name: ${camName}\nPasscode: ${remotePasscode}\nStream ID: ${pushId}`);
+        }
+
+        // Init App On Load
+        window.onload = () => {
+            initNinjaEngine();
         };
     </script>
 </body>
