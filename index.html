@@ -3,33 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OBS Ninja Pro Mobile Camera Sender</title>
+    <title>OBSCam Phone - Pro Camera Sender</title>
     <style>
         * {
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
-        }
-        body, html {
             margin: 0;
             padding: 0;
+        }
+        body, html {
             width: 100%;
             height: 100%;
-            background-color: #000000;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
         }
-        .container {
+        .app-container {
             position: relative;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
 
-        /* Video element หลักสำหรับพรีวิว */
+        /* Video Display Area */
         #local-video {
             position: absolute;
             top: 0;
@@ -41,11 +41,29 @@
             background: #000;
         }
 
-        /* iframe VDO.Ninja */
-        #ninja-iframe {
+        /* Camera Grid Overlay */
+        .camera-grid {
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            display: none;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+        }
+        .camera-grid.active {
+            display: grid;
+        }
+        .grid-cell {
+            border: 0.5px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Ninja Frame Backend Engine */
+        #ninja-iframe {
+            position: absolute;
             width: 1px;
             height: 1px;
             opacity: 0;
@@ -53,314 +71,348 @@
             z-index: 0;
         }
 
-        /* Overlay แถบบน */
-        .overlay {
+        /* Top Header Navigation */
+        .top-bar {
             position: relative;
             z-index: 10;
-            padding: 16px;
+            padding: 12px 16px;
             background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .status-badge {
-            display: inline-flex;
+        .room-badge {
+            display: flex;
             align-items: center;
-            gap: 6px;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 6px 12px;
+            gap: 8px;
+            background: rgba(20, 20, 25, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 13px;
+            font-weight: 600;
         }
-        .dot {
-            width: 8px;
-            height: 8px;
+        .status-dot {
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
-            background-color: #ff4444;
+            background-color: #ff3b30;
         }
-        .dot.active {
-            background-color: #00f59b;
-            box-shadow: 0 0 8px #00f59b;
+        .status-dot.online {
+            background-color: #34c759;
+            box-shadow: 0 0 8px #34c759;
+        }
+        .info-stats {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-left: 4px;
         }
 
-        /* แถบปรับ Zoom + ปุ่ม Torch บนหน้าจอหลัก (ด้านขวา) */
-        .zoom-overlay {
+        /* Right Side Camera Toolbar (Zoom & Flash Control) */
+        .right-toolbar {
             position: absolute;
-            right: 16px;
+            right: 14px;
             top: 50%;
             transform: translateY(-50%);
             z-index: 15;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(8px);
-            padding: 16px 8px;
+            background: rgba(15, 15, 20, 0.5);
+            backdrop-filter: blur(16px);
+            padding: 14px 8px;
             border-radius: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             gap: 12px;
         }
-        .zoom-slider-vertical {
+        .zoom-slider-v {
             writing-mode: bt-lr;
             -webkit-appearance: slider-vertical;
-            width: 8px;
-            height: 140px;
-            accent-color: #00f59b;
+            width: 6px;
+            height: 130px;
+            accent-color: #0a84ff;
             cursor: pointer;
         }
-        .zoom-label {
+        .zoom-val-text {
             font-size: 11px;
-            font-weight: bold;
-            color: #00f59b;
+            font-weight: 700;
+            color: #0a84ff;
         }
 
-        /* ปุ่มกดใช้สไตล์ร่วม */
-        .btn-action {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
+        /* Quick Lens Switcher Pills (0.5x, 1x, 2x, 3x) */
+        .lens-selector {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            padding: 6px 12px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .lens-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: #fff;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            width: 48px;
-            height: 48px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lens-btn.active {
+            background: #0a84ff;
+            color: #fff;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(10, 132, 255, 0.6);
+        }
+
+        /* Circular Action Buttons */
+        .btn-round {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            border-radius: 50%;
+            width: 46px;
+            height: 46px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
-        .btn-action:active {
+        .btn-round:active {
             transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.3);
         }
-        .btn-action.active-state {
-            background: rgba(0, 245, 155, 0.4);
-            border-color: #00f59b;
-            box-shadow: 0 0 10px rgba(0, 245, 155, 0.5);
-        }
-
-        /* ปุ่มล่างปรับขนาดใหญ่ขึ้นเล็กน้อย */
-        .controls-bottom .btn-action {
-            width: 56px;
-            height: 56px;
-            font-size: 20px;
+        .btn-round.active {
+            background: rgba(10, 132, 255, 0.5);
+            border-color: #0a84ff;
+            box-shadow: 0 0 10px rgba(10, 132, 255, 0.5);
         }
 
-        /* แถบควบคุมด้านล่าง */
-        .controls-bottom {
+        /* Bottom Menu Dock */
+        .bottom-dock {
             position: relative;
             z-index: 10;
-            padding: 20px;
-            background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
+            padding: 16px 20px 28px 20px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
             display: flex;
             justify-content: space-around;
             align-items: center;
         }
+        .bottom-dock .btn-round {
+            width: 54px;
+            height: 54px;
+            font-size: 22px;
+        }
 
-        /* แผงเมนูตั้งค่ากล้อง (Settings Drawer) */
-        .settings-panel {
+        /* Slide-up Settings Drawer */
+        .drawer-panel {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
-            max-height: 85vh;
-            background: rgba(18, 18, 20, 0.95);
-            backdrop-filter: blur(16px);
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px 20px 0 0;
-            z-index: 20;
+            max-height: 80vh;
+            background: rgba(20, 20, 24, 0.96);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px 24px 0 0;
+            z-index: 30;
             padding: 20px;
             overflow-y: auto;
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
         }
-        .settings-panel.open {
+        .drawer-panel.open {
             transform: translateY(0);
         }
-        .settings-header {
+        .drawer-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            padding-bottom: 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
         }
-        .settings-header h3 {
-            margin: 0;
-            font-size: 18px;
-            color: #00f59b;
+        .drawer-header h3 {
+            font-size: 17px;
+            color: #0a84ff;
+            font-weight: 600;
         }
-        .btn-close {
-            background: none;
+        .btn-close-drawer {
+            background: rgba(255, 255, 255, 0.1);
             border: none;
-            color: #aaa;
-            font-size: 20px;
+            color: #ccc;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
             cursor: pointer;
         }
-        .setting-group {
+        .form-group {
             margin-bottom: 16px;
         }
-        .setting-group label {
+        .form-group label {
             display: block;
-            font-size: 13px;
-            color: #aaa;
+            font-size: 12px;
+            color: #8e8e93;
             margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .setting-control select, .setting-control input[type="range"] {
+        .form-control select, .form-control input[type="range"] {
             width: 100%;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
             color: #fff;
             font-size: 14px;
             outline: none;
         }
-        .setting-control select option {
-            background: #222;
+        .form-control select option {
+            background: #1c1c1e;
             color: #fff;
         }
-        .slider-container {
+        .range-container {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        .slider-value {
-            font-size: 12px;
-            color: #00f59b;
-            min-width: 55px;
-            text-align: right;
+        .range-val {
+            font-size: 13px;
+            color: #0a84ff;
             font-weight: bold;
+            min-width: 60px;
+            text-align: right;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <!-- แถบ Overlay ด้านบน -->
-        <div class="overlay">
-            <div class="status-badge">
-                <div class="dot" id="status-dot"></div>
-                <span id="status-text">กำลังเตรียมการ...</span>
-            </div>
-            <div class="status-badge" id="stream-id-display">ID: ---</div>
+    <div class="app-container">
+        <!-- Grid View Overlay -->
+        <div class="camera-grid" id="camera-grid">
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
         </div>
 
-        <!-- หน้าจอพรีวิวภาพจริงจาก Native MediaStream -->
+        <!-- Video Stream Preview -->
         <video id="local-video" autoplay playsinline muted></video>
 
-        <!-- iframe VDO.Ninja Engine -->
+        <!-- VDO.Ninja Connection Engine -->
         <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
 
-        <!-- แถบแนวตั้งด้านขวา: รวมหลอดซูม และ ปุ่มไฟฉาย Torch -->
-        <div class="zoom-overlay">
-            <!-- ปุ่มไฟฉาย Torch ข้างหลอดซูม -->
-            <button class="btn-action" onclick="toggleTorch()" id="torch-btn-side" title="เปิด/ปิด ไฟฉาย">🔦</button>
-            <hr style="width: 80%; border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 2px 0;">
-            <span class="zoom-label" id="main-zoom-val">1.0x</span>
-            <input type="range" class="zoom-slider-vertical" id="main-zoom-slider" min="1" max="5" step="0.1" value="1" oninput="applyHardwareZoom(this.value)">
+        <!-- Top Header Status Bar -->
+        <div class="top-bar">
+            <div class="room-badge">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="room-text">ROOM: ---</span>
+                <span class="info-stats" id="stats-display">OFFLINE</span>
+            </div>
+            <button class="btn-round" style="width:36px; height:36px; font-size:14px;" onclick="toggleGrid()" id="grid-btn" title="Grid Line">🌐</button>
+        </div>
+
+        <!-- Right Side Control Bar: Torch + Zoom -->
+        <div class="right-toolbar">
+            <button class="btn-round" id="torch-btn" onclick="toggleTorch()" title="Torch Light">🔦</button>
+            <hr style="width: 80%; border:0; border-top: 1px solid rgba(255,255,255,0.15); margin: 2px 0;">
+            <span class="zoom-val-text" id="zoom-val">1.0x</span>
+            <input type="range" class="zoom-slider-v" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="setZoom(this.value)">
             <span style="font-size: 12px;">🔍</span>
         </div>
 
-        <!-- แถบปุ่มควบคุมด้านล่าง -->
-        <div class="controls-bottom">
-            <button class="btn-action" onclick="switchCameraQuick()" title="สลับกล้อง">🔄</button>
-            <button class="btn-action" onclick="toggleMute()" id="mute-btn" title="เปิด/ปิด ไมค์">🎙️</button>
-            <button class="btn-action" onclick="toggleMirror()" id="mirror-btn" title="กลับด้านภาพ">🪞</button>
-            <button class="btn-action" onclick="toggleSettings()" title="ตั้งค่ากล้อง">⚙️</button>
+        <!-- Quick Camera Lens Preset Selector -->
+        <div class="lens-selector" id="lens-selector">
+            <button class="lens-btn" onclick="quickLensSwitch('ultrawide')">0.5</button>
+            <button class="lens-btn active" onclick="quickLensSwitch('main')">1x</button>
+            <button class="lens-btn" onclick="quickLensSwitch('tele')">2x</button>
         </div>
 
-        <!-- แผงเมนูตั้งค่ากล้อง & Bitrate (Settings Drawer) -->
-        <div class="settings-panel" id="settings-panel">
-            <div class="settings-header">
-                <h3>⚙️ ตั้งค่ากล้อง & การเชื่อมต่อ</h3>
-                <button class="btn-close" onclick="toggleSettings()">✖</button>
+        <!-- Bottom Navigation Dock -->
+        <div class="bottom-dock">
+            <button class="btn-round" onclick="switchCameraSequence()" title="Switch Camera">🔄</button>
+            <button class="btn-round" onclick="toggleMute()" id="mute-btn" title="Mute Mic">🎙️</button>
+            <button class="btn-round" onclick="toggleMirror()" id="mirror-btn" title="Mirror Video">🪞</button>
+            <button class="btn-round" onclick="openDrawer()" title="Settings">⚙️</button>
+        </div>
+
+        <!-- Settings Slide Drawer -->
+        <div class="drawer-panel" id="settings-drawer">
+            <div class="drawer-header">
+                <h3>📷 OBSCam Settings</h3>
+                <button class="btn-close-drawer" onclick="closeDrawer()">✕</button>
             </div>
 
-            <!-- เลือกกล้อง (รองรับเลนส์ Ultra-wide, Wide, Telephoto) -->
-            <div class="setting-group">
-                <label>เลือกอุปกรณ์กล้อง (Camera Source)</label>
-                <div class="setting-control">
-                    <select id="camera-select" onchange="selectHardwareCamera(this.value)">
-                        <option value="">กำลังโหลดรายการกล้อง...</option>
+            <!-- Hardware Camera Device Selection -->
+            <div class="form-group">
+                <label>Camera Source (อุปกรณ์กล้อง)</label>
+                <div class="form-control">
+                    <select id="camera-select" onchange="changeHardwareCamera(this.value)">
+                        <option value="">Loading cameras...</option>
                     </select>
                 </div>
             </div>
 
-            <!-- เลือกโหมดการเชื่อมต่อ (Connection Mode) -->
-            <div class="setting-group">
-                <label>โหมดการเชื่อมต่อ (Connection Mode)</label>
-                <div class="setting-control">
-                    <select id="connection-mode-select" onchange="changeConnectionMode(this.value)">
-                        <option value="0">🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำสุด)</option>
-                        <option value="1">📶 Wi-Fi Mode (เสถียร / สมดุล)</option>
-                        <option value="2">📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)</option>
-                        <option value="custom">⚙️ Custom Mode (ตั้งค่ากำหนดเอง)</option>
+            <!-- Microphone Selection -->
+            <div class="form-group">
+                <label>Audio Source (ไมโครโฟน)</label>
+                <div class="form-control">
+                    <select id="mic-select" onchange="changeHardwareMic(this.value)">
+                        <option value="">Loading microphones...</option>
                     </select>
                 </div>
             </div>
 
-            <!-- ปรับเลือก Bitrate -->
-            <div class="setting-group">
-                <label>อัตราบิตเรต (Bitrate Selection)</label>
-                <div class="setting-control">
-                    <select id="bitrate-select" onchange="changeBitratePreset(this.value)">
-                        <option value="auto">ตามโหมดการเชื่อมต่อ</option>
-                        <option value="1000">1,000 kbps (1 Mbps - ประหยัดเน็ต)</option>
-                        <option value="2500">2,500 kbps (2.5 Mbps - เน็ตมือถือ)</option>
-                        <option value="3500">3,500 kbps (3.5 Mbps - Wi-Fi ทั่วไป)</option>
-                        <option value="6000">6,000 kbps (6 Mbps - USB / Wi-Fi แรง)</option>
-                        <option value="10000">10,000 kbps (10 Mbps - USB High Quality)</option>
-                        <option value="15000">15,000 kbps (15 Mbps - Ultra HD)</option>
-                        <option value="custom">กำหนดเอง (Manual Slider)</option>
+            <!-- Quality Preset -->
+            <div class="form-group">
+                <label>Connection Mode (โหมดการเชื่อมต่อ)</label>
+                <div class="form-control">
+                    <select id="mode-select" onchange="applyModePreset(this.value)">
+                        <option value="usb">🔌 USB Tethering (Max Quality / Ultra-low Latency)</option>
+                        <option value="wifi" selected>📶 Wi-Fi Network (Balanced)</option>
+                        <option value="mobile">📡 Mobile Data 4G/5G (Bandwidth Saver)</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Slider ปรับ Bitrate แบบกำหนดเอง -->
-            <div class="setting-group" id="custom-bitrate-group">
-                <label>ปรับ Bitrate แบบละเอียด (kbps)</label>
-                <div class="setting-control slider-container">
-                    <input type="range" id="bitrate-slider" min="500" max="20000" step="500" value="3500" oninput="updateBitrateSliderLabel(this.value)" onchange="changeBitrateValue(this.value)">
-                    <span class="slider-value" id="bitrate-val">3,500 k</span>
+            <!-- Bitrate Fine Tuning -->
+            <div class="form-group">
+                <label>Target Bitrate (อัตราบิตเรต)</label>
+                <div class="form-control range-container">
+                    <input type="range" id="bitrate-range" min="500" max="15000" step="500" value="4000" oninput="updateBitrateLabel(this.value)" onchange="sendBitrateCommand(this.value)">
+                    <span class="range-val" id="bitrate-lbl">4,000 k</span>
                 </div>
             </div>
 
-            <!-- เลือกไมโครโฟน -->
-            <div class="setting-group">
-                <label>เลือกไมโครโฟน (Audio Source)</label>
-                <div class="setting-control">
-                    <select id="mic-select" onchange="selectHardwareMic(this.value)">
-                        <option value="">กำลังโหลดรายการไมค์...</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- ปรับความละเอียดวิดีโอ -->
-            <div class="setting-group">
-                <label>ความละเอียดวิดีโอ (Resolution)</label>
-                <div class="setting-control">
-                    <select id="res-select" onchange="changeResolution(this.value)">
-                        <option value="default">อัตโนมัติ (Default)</option>
-                        <option value="3840x2160">4K Ultra HD</option>
+            <!-- Resolution & FPS -->
+            <div class="form-group">
+                <label>Resolution (ความละเอียดวิดีโอ)</label>
+                <div class="form-control">
+                    <select id="res-select" onchange="sendResolutionCommand(this.value)">
                         <option value="1920x1080">1080p Full HD</option>
-                        <option value="1280x720">720p HD</option>
+                        <option value="1280x720" selected>720p HD</option>
                         <option value="640x480">480p SD</option>
                     </select>
                 </div>
             </div>
 
-            <!-- ปรับ Framerate -->
-            <div class="setting-group">
-                <label>เฟรมเรตสูงสุด (Max FPS)</label>
-                <div class="setting-control">
-                    <select id="fps-select" onchange="changeFPS(this.value)">
+            <div class="form-group">
+                <label>Max Framerate (เฟรมเรต)</label>
+                <div class="form-control">
+                    <select id="fps-select" onchange="sendFPSCommand(this.value)">
                         <option value="60">60 FPS</option>
-                        <option value="30">30 FPS</option>
+                        <option value="30" selected>30 FPS</option>
                     </select>
                 </div>
             </div>
@@ -369,40 +421,27 @@
 
     <script>
         let currentStream = null;
-        let videoTrack = null;
-        let videoDevicesList = [];
+        let activeVideoTrack = null;
+        let cameraDevices = [];
         let currentCamIndex = 0;
 
         let isMuted = false;
         let isTorchOn = false;
         let isMirrored = false;
+        let isGridOn = false;
 
-        const videoElement = document.getElementById('local-video');
-        const iframe = document.getElementById('ninja-iframe');
+        const videoEl = document.getElementById('local-video');
+        const ninjaIframe = document.getElementById('ninja-iframe');
 
-        // ดึง URL Parameters
+        // Parse Parameters (?room=196426 or ?push=196426)
         const urlParams = new URLSearchParams(window.location.search);
-        const pushId = urlParams.get('push');
-        const initialQuality = urlParams.get('quality') || '0';
+        const roomId = urlParams.get('room') || urlParams.get('push') || 'OBSCam' + Math.floor(Math.random() * 9000 + 1000);
+        document.getElementById('room-text').innerText = `ROOM: ${roomId}`;
 
-        document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Unknown'}`;
-
-        function getQualitySettings(q) {
-            if (q === '0') {
-                return { label: '🔌 USB Mode', bitrate: 6000, maxfps: 60, res: '1920x1080' };
-            } else if (q === '1') {
-                return { label: '📶 Wi-Fi Mode', bitrate: 3500, maxfps: 30, res: '1280x720' };
-            } else {
-                return { label: '📡 4G/5G Mode', bitrate: 1500, maxfps: 30, res: '1280x720' };
-            }
-        }
-
-        let currentQualitySettings = getQualitySettings(initialQuality);
-
-        // ดึง Stream กล้องตรงจาก Native WebRTC
-        async function startNativeCamera(deviceId = null) {
+        // Initialize Native Camera Stream
+        async function initCameraStream(deviceId = null) {
             if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
+                currentStream.getTracks().forEach(t => t.stop());
             }
 
             const constraints = {
@@ -412,230 +451,210 @@
 
             try {
                 currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElement.srcObject = currentStream;
-                videoTrack = currentStream.getVideoTracks()[0];
+                videoEl.srcObject = currentStream;
+                activeVideoTrack = currentStream.getVideoTracks()[0];
 
-                // ตั้งค่า Zoom Capability
-                setupZoomCapability(videoTrack);
-
-                // โหลดอุปกรณ์ทั้งหมด
-                await listHardwareDevices();
-
-                if (videoTrack) {
-                    const settings = videoTrack.getSettings();
-                    if (settings.deviceId) {
-                        document.getElementById('camera-select').value = settings.deviceId;
-                    }
-                }
-
-                initNinjaIframe();
+                setupZoomSlider(activeVideoTrack);
+                await enumerateDevicesList();
+                connectToNinjaEngine();
 
             } catch (err) {
-                console.error("Camera access error:", err);
-                alert("ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตสิทธิ์การใช้กล้อง");
+                console.error("Camera Access Error:", err);
+                alert("ไม่สามารถเปิดใช้งานกล้องได้ กรุณาตรวจสอบสิทธิ์การใช้งานกล้อง");
             }
         }
 
-        function setupZoomCapability(track) {
+        // Hardware Native Zoom
+        function setupZoomSlider(track) {
             if (!track) return;
-            
             const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-            const zoomSlider = document.getElementById('main-zoom-slider');
+            const zoomSlider = document.getElementById('zoom-slider');
 
             if ('zoom' in capabilities) {
-                zoomSlider.min = capabilities.zoom.min;
-                zoomSlider.max = capabilities.zoom.max;
+                zoomSlider.min = capabilities.zoom.min || 1;
+                zoomSlider.max = capabilities.zoom.max || 5;
                 zoomSlider.step = capabilities.zoom.step || 0.1;
-                zoomSlider.value = capabilities.zoom.min;
-                document.getElementById('main-zoom-val').innerText = `${zoomSlider.value}x`;
-                zoomSlider.disabled = false;
-            } else {
-                zoomSlider.disabled = false;
+                zoomSlider.value = capabilities.zoom.min || 1;
+                document.getElementById('zoom-val').innerText = `${parseFloat(zoomSlider.value).toFixed(1)}x`;
             }
         }
 
-        async function applyHardwareZoom(val) {
-            document.getElementById('main-zoom-val').innerText = `${parseFloat(val).toFixed(1)}x`;
-
-            if (videoTrack) {
-                const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
-
+        async function setZoom(val) {
+            document.getElementById('zoom-val').innerText = `${parseFloat(val).toFixed(1)}x`;
+            if (activeVideoTrack) {
+                const capabilities = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
                 if ('zoom' in capabilities) {
                     try {
-                        await videoTrack.applyConstraints({
-                            advanced: [{ zoom: parseFloat(val) }]
-                        });
+                        await activeVideoTrack.applyConstraints({ advanced: [{ zoom: parseFloat(val) }] });
                     } catch (e) {
-                        videoElement.style.transform = `scale(${val})`;
+                        videoEl.style.transform = `scale(${val})`;
                     }
                 } else {
-                    videoElement.style.transform = `scale(${val})`;
+                    videoEl.style.transform = `scale(${val})`;
                 }
             }
         }
 
-        async function listHardwareDevices() {
+        // Populate Camera & Audio Device Options
+        async function enumerateDevicesList() {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const cameraSelect = document.getElementById('camera-select');
+            const camSelect = document.getElementById('camera-select');
             const micSelect = document.getElementById('mic-select');
 
-            cameraSelect.innerHTML = '';
+            camSelect.innerHTML = '';
             micSelect.innerHTML = '';
-            videoDevicesList = [];
+            cameraDevices = [];
 
-            let camCount = 1;
-            let micCount = 1;
+            let camIndex = 1, micIndex = 1;
 
-            devices.forEach(device => {
-                const option = document.createElement('option');
-                option.value = device.deviceId;
+            devices.forEach(dev => {
+                const opt = document.createElement('option');
+                opt.value = dev.deviceId;
 
-                if (device.kind === 'videoinput') {
-                    videoDevicesList.push(device.deviceId);
-                    option.text = device.label || `กล้องตัวที่ ${camCount++}`;
-                    cameraSelect.appendChild(option);
-                } else if (device.kind === 'audioinput') {
-                    option.text = device.label || `ไมโครโฟน ${micCount++}`;
-                    micSelect.appendChild(option);
+                if (dev.kind === 'videoinput') {
+                    cameraDevices.push(dev);
+                    opt.text = dev.label || `Camera ${camIndex++}`;
+                    camSelect.appendChild(opt);
+                } else if (dev.kind === 'audioinput') {
+                    opt.text = dev.label || `Microphone ${micIndex++}`;
+                    micSelect.appendChild(opt);
                 }
             });
-        }
 
-        function selectHardwareCamera(deviceId) {
-            if (deviceId) {
-                startNativeCamera(deviceId);
-                sendNinjaCommand({ action: 'changeVideoTarget', value: deviceId });
+            if (activeVideoTrack) {
+                const settings = activeVideoTrack.getSettings();
+                if (settings.deviceId) camSelect.value = settings.deviceId;
             }
         }
 
-        function switchCameraQuick() {
-            if (videoDevicesList.length > 1) {
-                currentCamIndex = (currentCamIndex + 1) % videoDevicesList.length;
-                const targetDeviceId = videoDevicesList[currentCamIndex];
-                document.getElementById('camera-select').value = targetDeviceId;
-                selectHardwareCamera(targetDeviceId);
+        // Quick Lens Switch
+        function quickLensSwitch(type) {
+            document.querySelectorAll('.lens-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (type === 'ultrawide' && cameraDevices.length > 1) {
+                // Try switching to Ultra-wide lens if available
+                const wideCam = cameraDevices.find(d => d.label.toLowerCase().includes('wide') || d.label.toLowerCase().includes('0.5'));
+                if (wideCam) changeHardwareCamera(wideCam.deviceId);
+                else setZoom(1.0);
+            } else if (type === 'tele') {
+                setZoom(2.0);
             } else {
-                sendNinjaCommand({ action: 'changeVideoTarget' });
+                setZoom(1.0);
             }
         }
 
-        function selectHardwareMic(deviceId) {
+        function changeHardwareCamera(deviceId) {
             if (deviceId) {
-                sendNinjaCommand({ action: 'changeAudioTarget', value: deviceId });
+                initCameraStream(deviceId);
+                postNinjaCmd({ action: 'changeVideoTarget', value: deviceId });
             }
         }
 
-        function initNinjaIframe() {
-            if (!pushId) {
-                document.getElementById('status-text').innerText = 'NO STREAM ID';
-                return;
+        function switchCameraSequence() {
+            if (cameraDevices.length > 1) {
+                currentCamIndex = (currentCamIndex + 1) % cameraDevices.length;
+                const targetId = cameraDevices[currentCamIndex].deviceId;
+                document.getElementById('camera-select').value = targetId;
+                changeHardwareCamera(targetId);
             }
-
-            let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back`;
-            ninjaUrl += `&videobitrate=${currentQualitySettings.bitrate}&maxfps=${currentQualitySettings.maxfps}`;
-
-            iframe.src = ninjaUrl;
         }
 
-        window.addEventListener('message', function(e) {
-            if (e.source !== iframe.contentWindow) return;
+        function changeHardwareMic(deviceId) {
+            if (deviceId) {
+                postNinjaCmd({ action: 'changeAudioTarget', value: deviceId });
+            }
+        }
 
+        // VDO.Ninja Engine Bridge
+        function connectToNinjaEngine() {
+            let ninjaUrl = `https://vdo.ninja/?push=${roomId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back&videobitrate=4000`;
+            ninjaIframe.src = ninjaUrl;
+        }
+
+        function postNinjaCmd(cmd) {
+            if (ninjaIframe && ninjaIframe.contentWindow) {
+                ninjaIframe.contentWindow.postMessage(JSON.stringify(cmd), '*');
+            }
+        }
+
+        window.addEventListener('message', (e) => {
+            if (e.source !== ninjaIframe.contentWindow) return;
             try {
-                const data = JSON.parse(e.data);
-                if (data.action === 'system' && data.value === 'connected') {
-                    document.getElementById('status-dot').classList.add('active');
-                    document.getElementById('status-text').innerText = 'LIVE ONLINE';
+                const msg = JSON.parse(e.data);
+                if (msg.action === 'system' && msg.value === 'connected') {
+                    document.getElementById('status-dot').classList.add('online');
+                    document.getElementById('stats-display').innerText = 'LIVE ONLINE';
                 }
             } catch (err) {}
         });
 
-        function sendNinjaCommand(cmdObject) {
-            if (iframe && iframe.contentWindow) {
-                iframe.contentWindow.postMessage(JSON.stringify(cmdObject), '*');
-            }
-        }
-
+        // Controls
         function toggleMute() {
             isMuted = !isMuted;
             if (currentStream) {
                 currentStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
             }
-            sendNinjaCommand({ action: 'mute', value: isMuted });
+            postNinjaCmd({ action: 'mute', value: isMuted });
             const btn = document.getElementById('mute-btn');
             btn.innerText = isMuted ? '🔇' : '🎙️';
-            btn.classList.toggle('active-state', isMuted);
+            btn.classList.toggle('active', isMuted);
         }
 
-        // เปิด/ปิด ไฟฉาย Torch พร้อมไฮไลต์ปุ่มข้างหลอดซูม
         async function toggleTorch() {
             isTorchOn = !isTorchOn;
-            if (videoTrack) {
-                const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+            if (activeVideoTrack) {
+                const capabilities = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
                 if ('torch' in capabilities) {
                     try {
-                        await videoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+                        await activeVideoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
                     } catch (e) { console.warn(e); }
                 }
             }
-            sendNinjaCommand({ action: 'torch', value: isTorchOn });
-            
-            const sideBtn = document.getElementById('torch-btn-side');
-            if (sideBtn) sideBtn.classList.toggle('active-state', isTorchOn);
+            postNinjaCmd({ action: 'torch', value: isTorchOn });
+            document.getElementById('torch-btn').classList.toggle('active', isTorchOn);
         }
 
         function toggleMirror() {
             isMirrored = !isMirrored;
-            videoElement.style.transform = isMirrored ? 'scaleX(-1)' : 'scaleX(1)';
-            sendNinjaCommand({ action: 'mirror', value: isMirrored });
-            document.getElementById('mirror-btn').classList.toggle('active-state', isMirrored);
+            videoEl.style.transform = isMirrored ? 'scaleX(-1)' : 'scaleX(1)';
+            postNinjaCmd({ action: 'mirror', value: isMirrored });
+            document.getElementById('mirror-btn').classList.toggle('active', isMirrored);
         }
 
-        function toggleSettings() {
-            const panel = document.getElementById('settings-panel');
-            panel.classList.toggle('open');
+        function toggleGrid() {
+            isGridOn = !isGridOn;
+            document.getElementById('camera-grid').classList.toggle('active', isGridOn);
+            document.getElementById('grid-btn').classList.toggle('active', isGridOn);
         }
 
-        function changeConnectionMode(modeKey) {
-            if (modeKey === 'custom') return;
-            const settings = getQualitySettings(modeKey);
-            currentQualitySettings = settings;
+        // Drawer Settings Controls
+        function openDrawer() { document.getElementById('settings-drawer').classList.add('open'); }
+        function closeDrawer() { document.getElementById('settings-drawer').classList.remove('open'); }
 
-            document.getElementById('bitrate-slider').value = settings.bitrate;
-            updateBitrateSliderLabel(settings.bitrate);
-            document.getElementById('fps-select').value = settings.maxfps.toString();
+        function applyModePreset(mode) {
+            let bitrate = 4000;
+            if (mode === 'usb') bitrate = 8000;
+            else if (mode === 'mobile') bitrate = 1800;
 
-            sendNinjaCommand({ action: 'bitrate', value: settings.bitrate });
-            sendNinjaCommand({ action: 'framerate', value: settings.maxfps });
+            document.getElementById('bitrate-range').value = bitrate;
+            updateBitrateLabel(bitrate);
+            sendBitrateCommand(bitrate);
         }
 
-        function changeBitratePreset(val) {
-            let targetBitrate = currentQualitySettings.bitrate;
-            if (val !== 'auto' && val !== 'custom') targetBitrate = parseInt(val);
-            document.getElementById('bitrate-slider').value = targetBitrate;
-            updateBitrateSliderLabel(targetBitrate);
-            sendNinjaCommand({ action: 'bitrate', value: targetBitrate });
+        function updateBitrateLabel(val) {
+            document.getElementById('bitrate-lbl').innerText = `${parseInt(val).toLocaleString()} k`;
         }
 
-        function updateBitrateSliderLabel(val) {
-            document.getElementById('bitrate-val').innerText = `${parseInt(val).toLocaleString()} k`;
-        }
-
-        function changeBitrateValue(val) {
-            sendNinjaCommand({ action: 'bitrate', value: parseInt(val) });
-        }
-
-        function changeResolution(res) {
-            if (res === 'default') return;
+        function sendBitrateCommand(val) { postNinjaCmd({ action: 'bitrate', value: parseInt(val) }); }
+        function sendResolutionCommand(res) {
             const [w, h] = res.split('x');
-            sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
+            postNinjaCmd({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
         }
-
-        function changeFPS(fps) {
-            sendNinjaCommand({ action: 'framerate', value: parseInt(fps) });
-        }
+        function sendFPSCommand(fps) { postNinjaCmd({ action: 'framerate', value: parseInt(fps) }); }
 
         window.onload = () => {
-            startNativeCamera();
+            initCameraStream();
         };
     </script>
 </body>
