@@ -1,394 +1,2549 @@
 <!DOCTYPE html>
+
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile Cam Sender UI (VDO.Ninja Compatible)</title>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        :root {
-            --accent-color: #3b82f6;
-            --danger-color: #ef4444;
-            --bg-glass: rgba(18, 19, 24, 0.65);
-            --border-glass: rgba(255, 255, 255, 0.15);
-        }
+<meta charset="UTF-8">
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
+<meta name="viewport"
+   content="width=device-width,
+            initial-scale=1.0,
+            maximum-scale=1.0,
+            user-scalable=no">
 
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-            color: #fff;
-        }
+<title>Mobile Cam Sender</title>
 
-        /* Fullscreen Video / Canvas Container */
-        .viewport {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+<script src="https://unpkg.com/lucide@latest"></script>
 
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+<style>
 
-        /* 9-Grid Overlay */
-        .grid-overlay {
-            position: absolute;
-            inset: 0;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+:root{
+    --accent:#3b82f6;
+    --green:#22c55e;
+    --red:#ef4444;
+    --orange:#f59e0b;
 
-        .grid-overlay.active {
-            opacity: 1;
-        }
+    --glass:rgba(18,19,24,.70);
+    --border:rgba(255,255,255,.15);
+}
 
-        .grid-cell {
-            border: 0.5px solid rgba(255, 255, 255, 0.25);
-        }
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
 
-        /* Top Status Bar */
-        .status-bar {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            background: var(--bg-glass);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-glass);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            z-index: 10;
-            transition: opacity 0.4s ease;
-        }
+    user-select:none;
+    -webkit-user-select:none;
 
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--danger-color);
-            border-radius: 50%;
-            animation: blink 1.5s infinite;
-        }
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif;
+}
 
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
+html,
+body{
 
-        /* Ergonomic Right Controls Panel */
-        .control-dock-right {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            background: var(--bg-glass);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-glass);
-            padding: 12px 10px;
-            border-radius: 28px;
-            z-index: 10;
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
+    width:100%;
+    height:100%;
 
-        /* Auto-Hide Utility Class */
-        .ui-hidden {
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
+    overflow:hidden;
 
-        .btn-action {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+    background:#000;
 
-        .btn-action:active {
-            transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.2);
-        }
+    color:#fff;
+}
 
-        .btn-action.active {
-            background: var(--accent-color);
-            border-color: var(--accent-color);
-        }
+.viewport{
 
-        /* Zoom Slider Slider Box */
-        .zoom-slider-container {
-            position: absolute;
-            right: 80px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--bg-glass);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-glass);
-            padding: 12px 8px;
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            height: 180px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
+    position:relative;
 
-        .zoom-slider-container.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
+    width:100vw;
+    height:100vh;
 
-        .zoom-slider-container input[type="range"] {
-            writing-mode: vertical-lr;
-            direction: rtl;
-            width: 6px;
-            height: 120px;
-            accent-color: var(--accent-color);
-        }
+    display:flex;
 
-        /* Embedded VDO.Ninja Frame (Hidden Processing Engine) */
-        #ninja-frame {
-            display: none;
-        }
-    </style>
+    justify-content:center;
+    align-items:center;
+
+    background:#000;
+}
+
+video{
+
+    width:100%;
+    height:100%;
+
+    object-fit:cover;
+
+    background:#000;
+}
+
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.grid-overlay{
+
+    position:absolute;
+
+    inset:0;
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    grid-template-rows:
+        repeat(3,1fr);
+
+    pointer-events:none;
+
+    opacity:0;
+
+    transition:
+        opacity .3s ease;
+
+    z-index:3;
+}
+
+.grid-overlay.active{
+    opacity:1;
+}
+
+.grid-cell{
+
+    border:
+        .5px solid
+        rgba(255,255,255,.28);
+}
+
+
+/* =====================================================
+   STATUS
+===================================================== */
+
+.status-bar{
+
+    position:absolute;
+
+    top:16px;
+    left:16px;
+
+    display:flex;
+
+    gap:9px;
+
+    align-items:center;
+
+    background:
+        var(--glass);
+
+    backdrop-filter:
+        blur(14px);
+
+    -webkit-backdrop-filter:
+        blur(14px);
+
+    border:
+        1px solid
+        var(--border);
+
+    padding:
+        7px 13px;
+
+    border-radius:22px;
+
+    font-size:.70rem;
+
+    z-index:30;
+
+    transition:
+        opacity .4s ease;
+}
+
+.live-dot{
+
+    width:8px;
+    height:8px;
+
+    background:
+        var(--red);
+
+    border-radius:50%;
+
+    animation:
+        blink 1.5s infinite;
+}
+
+@keyframes blink{
+
+    0%,100%{
+        opacity:1;
+    }
+
+    50%{
+        opacity:.3;
+    }
+}
+
+
+/* =====================================================
+   CONTROL DOCK
+===================================================== */
+
+.control-dock{
+
+    position:absolute;
+
+    right:16px;
+
+    top:50%;
+
+    transform:
+        translateY(-50%);
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:11px;
+
+    background:
+        var(--glass);
+
+    backdrop-filter:
+        blur(14px);
+
+    -webkit-backdrop-filter:
+        blur(14px);
+
+    border:
+        1px solid
+        var(--border);
+
+    padding:
+        12px 10px;
+
+    border-radius:28px;
+
+    z-index:30;
+
+    transition:
+        opacity .4s ease;
+}
+
+.ui-hidden{
+
+    opacity:0 !important;
+
+    pointer-events:none !important;
+}
+
+.btn-action{
+
+    width:44px;
+    height:44px;
+
+    border-radius:50%;
+
+    background:
+        rgba(255,255,255,.08);
+
+    border:
+        1px solid
+        rgba(255,255,255,.10);
+
+    color:#fff;
+
+    display:flex;
+
+    justify-content:center;
+    align-items:center;
+
+    cursor:pointer;
+
+    transition:
+        all .2s ease;
+}
+
+.btn-action:active{
+
+    transform:scale(.9);
+
+    background:
+        rgba(255,255,255,.2);
+}
+
+.btn-action.active{
+
+    background:
+        var(--accent);
+
+    border-color:
+        var(--accent);
+}
+
+
+/* =====================================================
+   GENERAL POPUP
+===================================================== */
+
+.popup{
+
+    position:absolute;
+
+    right:80px;
+
+    top:50%;
+
+    transform:
+        translateY(-50%);
+
+    background:
+        rgba(18,19,24,.96);
+
+    backdrop-filter:
+        blur(16px);
+
+    -webkit-backdrop-filter:
+        blur(16px);
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius:18px;
+
+    padding:15px;
+
+    z-index:50;
+
+    opacity:0;
+
+    pointer-events:none;
+
+    transition:
+        opacity .25s ease;
+}
+
+.popup.show{
+
+    opacity:1;
+
+    pointer-events:auto;
+}
+
+
+/* =====================================================
+   RESOLUTION
+===================================================== */
+
+.resolution-popup{
+
+    width:205px;
+}
+
+.popup-title{
+
+    font-size:.80rem;
+
+    font-weight:600;
+
+    margin-bottom:10px;
+
+    color:
+        rgba(255,255,255,.9);
+}
+
+.select-box{
+
+    width:100%;
+
+    padding:10px;
+
+    border-radius:11px;
+
+    border:
+        1px solid
+        rgba(255,255,255,.14);
+
+    background:
+        rgba(255,255,255,.07);
+
+    color:#fff;
+
+    outline:none;
+
+    font-size:.78rem;
+}
+
+.select-box option{
+
+    background:#18191f;
+
+    color:#fff;
+}
+
+.popup-info{
+
+    margin-top:9px;
+
+    font-size:.65rem;
+
+    color:
+        rgba(255,255,255,.55);
+
+    line-height:1.45;
+}
+
+
+/* =====================================================
+   NETWORK POPUP
+===================================================== */
+
+.network-popup{
+
+    width:250px;
+}
+
+.network-option{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:11px;
+
+    padding:11px;
+
+    margin-bottom:7px;
+
+    border-radius:12px;
+
+    background:
+        rgba(255,255,255,.06);
+
+    border:
+        1px solid
+        rgba(255,255,255,.08);
+
+    cursor:pointer;
+
+    transition:
+        .2s;
+}
+
+.network-option:hover{
+
+    background:
+        rgba(255,255,255,.12);
+}
+
+.network-option.active{
+
+    background:
+        rgba(59,130,246,.20);
+
+    border-color:
+        var(--accent);
+}
+
+.network-icon{
+
+    width:36px;
+    height:36px;
+
+    border-radius:10px;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+    background:
+        rgba(255,255,255,.08);
+}
+
+.network-text{
+
+    flex:1;
+}
+
+.network-name{
+
+    font-size:.78rem;
+
+    font-weight:600;
+}
+
+.network-desc{
+
+    margin-top:2px;
+
+    font-size:.62rem;
+
+    color:
+        rgba(255,255,255,.50);
+}
+
+.network-status{
+
+    margin-top:10px;
+
+    padding:9px;
+
+    border-radius:10px;
+
+    background:
+        rgba(255,255,255,.05);
+
+    font-size:.65rem;
+
+    line-height:1.5;
+}
+
+.network-online{
+    color:var(--green);
+}
+
+.network-offline{
+    color:var(--red);
+}
+
+.network-test{
+
+    width:100%;
+
+    margin-top:9px;
+
+    padding:9px;
+
+    border:0;
+
+    border-radius:10px;
+
+    background:
+        var(--accent);
+
+    color:#fff;
+
+    cursor:pointer;
+
+    font-size:.72rem;
+}
+
+
+/* =====================================================
+   ZOOM
+===================================================== */
+
+.zoom-popup{
+
+    width:58px;
+
+    height:190px;
+
+    padding:
+        12px 8px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+
+    gap:8px;
+}
+
+.zoom-popup input{
+
+    writing-mode:
+        vertical-lr;
+
+    direction:rtl;
+
+    width:6px;
+
+    height:125px;
+
+    accent-color:
+        var(--accent);
+}
+
+.zoom-value{
+
+    font-size:.68rem;
+}
+
+
+/* =====================================================
+   LOADING
+===================================================== */
+
+.loading{
+
+    position:absolute;
+
+    inset:0;
+
+    background:
+        rgba(0,0,0,.45);
+
+    backdrop-filter:
+        blur(3px);
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+    align-items:center;
+
+    gap:12px;
+
+    z-index:100;
+
+    opacity:0;
+
+    pointer-events:none;
+
+    transition:
+        opacity .2s;
+}
+
+.loading.show{
+
+    opacity:1;
+
+    pointer-events:auto;
+}
+
+.spinner{
+
+    width:38px;
+    height:38px;
+
+    border:
+        3px solid
+        rgba(255,255,255,.2);
+
+    border-top-color:
+        #fff;
+
+    border-radius:50%;
+
+    animation:
+        spin .8s linear infinite;
+}
+
+@keyframes spin{
+
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+.loading-text{
+
+    font-size:.78rem;
+
+    color:
+        rgba(255,255,255,.85);
+}
+
+
+/* =====================================================
+   ERROR
+===================================================== */
+
+.error-box{
+
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    transform:
+        translate(-50%,-50%);
+
+    width:
+        min(90%,380px);
+
+    background:
+        rgba(20,20,24,.97);
+
+    border:
+        1px solid
+        rgba(255,255,255,.12);
+
+    border-radius:18px;
+
+    padding:20px;
+
+    text-align:center;
+
+    z-index:120;
+
+    display:none;
+}
+
+.error-box.show{
+    display:block;
+}
+
+.error-box h3{
+
+    font-size:1rem;
+
+    margin-bottom:8px;
+}
+
+.error-box p{
+
+    font-size:.76rem;
+
+    line-height:1.5;
+
+    color:
+        rgba(255,255,255,.6);
+
+    margin-bottom:15px;
+}
+
+.retry{
+
+    border:0;
+
+    padding:10px 18px;
+
+    border-radius:10px;
+
+    background:
+        var(--accent);
+
+    color:#fff;
+
+    cursor:pointer;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media(max-width:600px){
+
+    .status-bar{
+
+        top:10px;
+        left:10px;
+
+        font-size:.61rem;
+
+        gap:6px;
+
+        padding:
+            6px 9px;
+    }
+
+    .control-dock{
+
+        right:10px;
+
+        gap:8px;
+
+        padding:
+            9px 8px;
+    }
+
+    .btn-action{
+
+        width:42px;
+        height:42px;
+    }
+
+    .popup{
+
+        right:68px;
+    }
+
+    .network-popup{
+
+        width:225px;
+    }
+
+}
+
+#ninja-frame{
+    display:none;
+}
+
+</style>
+
 </head>
+
 <body>
 
-    <div class="viewport" id="app-viewport">
-        <!-- Live Local Video Preview -->
-        <video id="webcam-preview" autoplay playsinline muted></video>
+<div
+    class="viewport"
+    id="app-viewport">
 
-        <!-- 9-Grid Lines -->
-        <div class="grid-overlay" id="grid-overlay">
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        </div>
+```
+<!-- CAMERA -->
+<video
+    id="webcam-preview"
+    autoplay
+    playsinline
+    muted>
+</video>
 
-        <!-- Top Telemetry & Status -->
-        <div class="status-bar" id="status-bar">
-            <div class="live-dot"></div>
-            <span id="stream-status">LIVE | ROOM: CAM1</span>
-            <span style="opacity: 0.5;">|</span>
-            <span id="fps-counter">60 FPS</span>
-        </div>
 
-        <!-- Vertical Zoom Slider Popup -->
-        <div class="zoom-slider-container" id="zoom-container">
-            <span style="font-size: 0.7rem;" id="zoom-val">1.0x</span>
-            <input type="range" id="zoom-range" min="1" max="5" step="0.1" value="1">
-            <i data-lucide="zoom-in" size="14"></i>
-        </div>
+<!-- GRID -->
+<div
+    class="grid-overlay"
+    id="grid-overlay">
 
-        <!-- Right Ergonomic Action Bar -->
-        <div class="control-dock-right" id="control-dock">
-            <button class="btn-action" id="btn-grid" title="Grid 9 ช่อง">
-                <i data-lucide="grid-3x3" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-zoom" title="ปรับระยะ Zoom">
-                <i data-lucide="search" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-focus" title="ล็อคโฟกัส AF/MF">
-                <i data-lucide="focus" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-flash" title="เปิด/ปิด Flash">
-                <i data-lucide="zap" size="20"></i>
-            </button>
-            <button class="btn-action" id="btn-flip" title="สลับกล้อง หน้า/หลัง">
-                <i data-lucide="switch-camera" size="20"></i>
-            </button>
-        </div>
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+
+</div>
+
+
+<!-- STATUS -->
+<div
+    class="status-bar"
+    id="status-bar">
+
+    <div class="live-dot"></div>
+
+    <span>
+        LIVE
+    </span>
+
+    <span style="opacity:.4">
+        |
+    </span>
+
+    <span id="network-status-small">
+        AUTO
+    </span>
+
+    <span style="opacity:.4">
+        |
+    </span>
+
+    <span id="resolution-status">
+        1080p
+    </span>
+
+    <span style="opacity:.4">
+        |
+    </span>
+
+    <span id="fps">
+        60 FPS
+    </span>
+
+</div>
+
+
+<!-- ZOOM POPUP -->
+<div
+    class="popup zoom-popup"
+    id="zoom-popup">
+
+    <span
+        class="zoom-value"
+        id="zoom-value">
+        1.0x
+    </span>
+
+    <input
+        type="range"
+        id="zoom-range"
+        min="1"
+        max="5"
+        step=".1"
+        value="1">
+
+    <i
+        data-lucide="zoom-in"
+        width="14"
+        height="14">
+    </i>
+
+</div>
+
+
+<!-- RESOLUTION POPUP -->
+<div
+    class="popup resolution-popup"
+    id="resolution-popup">
+
+    <div class="popup-title">
+        ความละเอียดกล้อง
     </div>
 
-    <!-- Hidden iframe for VDO.Ninja Engine -->
-    <iframe id="ninja-frame" allow="camera;microphone"></iframe>
+    <select
+        id="resolution-select"
+        class="select-box">
 
-    <script>
-        let currentStream = null;
-        let videoTrack = null;
-        let uiTimeout = null;
-        let isFocusLocked = false;
-        let isFlashOn = false;
-        let facingMode = "environment"; // กล้องหลังโดยเริ่มต้น
+        <option value="3840x2160">
+            4K — 3840 × 2160
+        </option>
 
-        const videoElem = document.getElementById('webcam-preview');
-        const gridOverlay = document.getElementById('grid-overlay');
-        const zoomContainer = document.getElementById('zoom-container');
-        const zoomRange = document.getElementById('zoom-range');
-        const zoomVal = document.getElementById('zoom-val');
+        <option value="2560x1440">
+            2K — 2560 × 1440
+        </option>
 
-        // 1. เริ่มระบบกล้องด้วย MediaStreams API
-        async function initCamera() {
-            try {
-                if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop());
+        <option value="1920x1080">
+            Full HD — 1920 × 1080
+        </option>
+
+        <option value="1280x720">
+            HD — 1280 × 720
+        </option>
+
+        <option value="854x480">
+            SD — 854 × 480
+        </option>
+
+    </select>
+
+    <div class="popup-info">
+
+        ระบบจะใช้ค่าที่กล้องรองรับ
+        หากไม่รองรับค่าที่เลือก
+        ระบบจะลดความละเอียดอัตโนมัติ
+
+    </div>
+
+</div>
+
+
+<!-- NETWORK POPUP -->
+<div
+    class="popup network-popup"
+    id="network-popup">
+
+    <div class="popup-title">
+        เลือกการเชื่อมต่อ
+    </div>
+
+
+    <!-- AUTO -->
+    <div
+        class="network-option"
+        data-network="auto">
+
+        <div class="network-icon">
+
+            <i
+                data-lucide="globe"
+                width="18">
+            </i>
+
+        </div>
+
+        <div class="network-text">
+
+            <div class="network-name">
+                Auto
+            </div>
+
+            <div class="network-desc">
+                ใช้เครือข่ายที่ระบบเลือก
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- WIFI -->
+    <div
+        class="network-option"
+        data-network="wifi">
+
+        <div class="network-icon">
+
+            <i
+                data-lucide="wifi"
+                width="18">
+            </i>
+
+        </div>
+
+        <div class="network-text">
+
+            <div class="network-name">
+                Wi-Fi
+            </div>
+
+            <div class="network-desc">
+                Wi-Fi / Hotspot
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- SIM -->
+    <div
+        class="network-option"
+        data-network="mobile">
+
+        <div class="network-icon">
+
+            <i
+                data-lucide="signal"
+                width="18">
+            </i>
+
+        </div>
+
+        <div class="network-text">
+
+            <div class="network-name">
+                SIM 4G / 5G
+            </div>
+
+            <div class="network-desc">
+                Mobile Data
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- USB -->
+    <div
+        class="network-option"
+        data-network="usb">
+
+        <div class="network-icon">
+
+            <i
+                data-lucide="usb"
+                width="18">
+            </i>
+
+        </div>
+
+        <div class="network-text">
+
+            <div class="network-name">
+                USB
+            </div>
+
+            <div class="network-desc">
+                USB Tethering / USB Network
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div
+        class="network-status"
+        id="network-info">
+
+        กำลังตรวจสอบเครือข่าย...
+
+    </div>
+
+
+    <button
+        class="network-test"
+        id="network-test">
+
+        ทดสอบการเชื่อมต่อ
+
+    </button>
+
+</div>
+
+
+<!-- CONTROL DOCK -->
+<div
+    class="control-dock"
+    id="control-dock">
+
+
+    <!-- GRID -->
+    <button
+        class="btn-action"
+        id="btn-grid"
+        title="Grid">
+
+        <i
+            data-lucide="grid-3x3"
+            width="20">
+        </i>
+
+    </button>
+
+
+    <!-- ZOOM -->
+    <button
+        class="btn-action"
+        id="btn-zoom"
+        title="Zoom">
+
+        <i
+            data-lucide="search"
+            width="20">
+        </i>
+
+    </button>
+
+
+    <!-- FOCUS -->
+    <button
+        class="btn-action"
+        id="btn-focus"
+        title="Focus">
+
+        <i
+            data-lucide="focus"
+            width="20">
+        </i>
+
+    </button>
+
+
+    <!-- FLASH -->
+    <button
+        class="btn-action"
+        id="btn-flash"
+        title="Flash">
+
+        <i
+            data-lucide="zap"
+            width="20">
+        </i>
+
+    </button>
+
+
+    <!-- FLIP -->
+    <button
+        class="btn-action"
+        id="btn-flip"
+        title="Flip">
+
+        <i
+            data-lucide="switch-camera"
+            width="20">
+        </i>
+
+    </button>
+
+
+    <!-- RESOLUTION -->
+    <button
+        class="btn-action"
+        id="btn-resolution"
+        title="Resolution">
+
+        <i
+            data-lucide="monitor"
+            width="20">
+        </i>
+
+    </button>
+
+
+    <!-- NETWORK -->
+    <button
+        class="btn-action"
+        id="btn-network"
+        title="Network">
+
+        <i
+            data-lucide="wifi"
+            width="20">
+        </i>
+
+    </button>
+
+</div>
+
+
+<!-- LOADING -->
+<div
+    class="loading"
+    id="loading">
+
+    <div class="spinner"></div>
+
+    <div
+        class="loading-text"
+        id="loading-text">
+
+        กำลังทำงาน...
+
+    </div>
+
+</div>
+
+
+<!-- ERROR -->
+<div
+    class="error-box"
+    id="error-box">
+
+    <h3>
+        ไม่สามารถเปิดกล้องได้
+    </h3>
+
+    <p id="error-text">
+        กรุณาตรวจสอบสิทธิ์กล้อง
+    </p>
+
+    <button
+        class="retry"
+        id="retry">
+
+        ลองใหม่
+
+    </button>
+
+</div>
+```
+
+</div>
+
+<!-- VDO NINJA -->
+
+<iframe
+    id="ninja-frame"
+    allow="camera;microphone">
+</iframe>
+
+<script>
+
+/* =====================================================
+   VARIABLES
+===================================================== */
+
+let currentStream = null;
+
+let videoTrack = null;
+
+let facingMode = "environment";
+
+let isFocusLocked = false;
+
+let isFlashOn = false;
+
+let uiTimer = null;
+
+let selectedNetwork =
+    localStorage.getItem(
+        "network_mode"
+    ) || "auto";
+
+
+/* =====================================================
+   ELEMENTS
+===================================================== */
+
+const video =
+    document.getElementById(
+        "webcam-preview"
+    );
+
+const loading =
+    document.getElementById(
+        "loading"
+    );
+
+const loadingText =
+    document.getElementById(
+        "loading-text"
+    );
+
+const errorBox =
+    document.getElementById(
+        "error-box"
+    );
+
+const errorText =
+    document.getElementById(
+        "error-text"
+    );
+
+const resolutionSelect =
+    document.getElementById(
+        "resolution-select"
+    );
+
+const resolutionStatus =
+    document.getElementById(
+        "resolution-status"
+    );
+
+const zoomRange =
+    document.getElementById(
+        "zoom-range"
+    );
+
+const zoomValue =
+    document.getElementById(
+        "zoom-value"
+    );
+
+const networkPopup =
+    document.getElementById(
+        "network-popup"
+    );
+
+const networkInfo =
+    document.getElementById(
+        "network-info"
+    );
+
+const networkSmall =
+    document.getElementById(
+        "network-status-small"
+    );
+
+
+/* =====================================================
+   RESOLUTION
+===================================================== */
+
+const resolutions = {
+
+    "3840x2160":{
+        width:3840,
+        height:2160,
+        label:"4K"
+    },
+
+    "2560x1440":{
+        width:2560,
+        height:1440,
+        label:"2K"
+    },
+
+    "1920x1080":{
+        width:1920,
+        height:1080,
+        label:"1080p"
+    },
+
+    "1280x720":{
+        width:1280,
+        height:720,
+        label:"720p"
+    },
+
+    "854x480":{
+        width:854,
+        height:480,
+        label:"480p"
+    }
+
+};
+
+
+/* =====================================================
+   LOAD SETTINGS
+===================================================== */
+
+const savedResolution =
+    localStorage.getItem(
+        "preferred_resolution"
+    );
+
+if(
+    savedResolution &&
+    resolutions[savedResolution]
+){
+
+    resolutionSelect.value =
+        savedResolution;
+
+}
+
+
+const savedLens =
+    localStorage.getItem(
+        "preferred_lens"
+    );
+
+if(savedLens){
+
+    facingMode =
+        savedLens;
+
+}
+
+
+/* =====================================================
+   NETWORK NAME
+===================================================== */
+
+function networkName(mode){
+
+    if(mode === "wifi")
+        return "Wi-Fi";
+
+    if(mode === "mobile")
+        return "SIM";
+
+    if(mode === "usb")
+        return "USB";
+
+    return "AUTO";
+
+}
+
+
+/* =====================================================
+   SELECT NETWORK
+===================================================== */
+
+function selectNetwork(mode){
+
+    selectedNetwork =
+        mode;
+
+    localStorage.setItem(
+        "network_mode",
+        mode
+    );
+
+    networkSmall.textContent =
+        networkName(mode);
+
+    document
+        .querySelectorAll(
+            ".network-option"
+        )
+        .forEach(option => {
+
+            option.classList.toggle(
+                "active",
+                option.dataset.network ===
+                mode
+            );
+
+        });
+
+    updateNetworkStatus();
+
+}
+
+
+/* =====================================================
+   NETWORK INFORMATION
+===================================================== */
+
+function updateNetworkStatus(){
+
+    if(!navigator.onLine){
+
+        networkInfo.innerHTML =
+            `<span class="network-offline">
+                ● OFFLINE
+            </span>
+            <br>
+            ไม่มีการเชื่อมต่ออินเทอร์เน็ต`;
+
+        return;
+    }
+
+
+    let connection =
+        navigator.connection ||
+        navigator.mozConnection ||
+        navigator.webkitConnection;
+
+
+    let type =
+        connection
+            ? connection.effectiveType
+            : "unknown";
+
+
+    let text = "";
+
+
+    if(
+        selectedNetwork ===
+        "wifi"
+    ){
+
+        text =
+            "โหมด Wi-Fi ถูกเลือก<br>" +
+            "กรุณาเชื่อมต่อ Wi-Fi / Hotspot";
+
+    }
+
+    else if(
+        selectedNetwork ===
+        "mobile"
+    ){
+
+        text =
+            "โหมด SIM 4G/5G ถูกเลือก<br>" +
+            "เปิด Mobile Data บนมือถือ";
+
+    }
+
+    else if(
+        selectedNetwork ===
+        "usb"
+    ){
+
+        text =
+            "โหมด USB ถูกเลือก<br>" +
+            "เปิด USB Tethering ก่อนใช้งาน";
+
+    }
+
+    else{
+
+        text =
+            "โหมด Auto<br>" +
+            "ระบบจะใช้เครือข่ายที่ OS เลือก";
+
+    }
+
+
+    networkInfo.innerHTML =
+        `<span class="network-online">
+            ● ONLINE
+        </span>
+        <br>
+        ${text}
+        <br>
+        Browser Network: ${type}`;
+
+}
+
+
+/* =====================================================
+   NETWORK TEST
+===================================================== */
+
+async function testNetwork(){
+
+    networkInfo.innerHTML =
+        "กำลังทดสอบการเชื่อมต่อ...";
+
+
+    const start =
+        performance.now();
+
+
+    try{
+
+        await fetch(
+            "https://vdo.ninja/favicon.ico?" +
+            Date.now(),
+            {
+                method:"HEAD",
+                cache:"no-store",
+                mode:"no-cors"
+            }
+        );
+
+
+        const ping =
+            Math.round(
+                performance.now() -
+                start
+            );
+
+
+        networkInfo.innerHTML =
+            `<span class="network-online">
+                ● CONNECTION OK
+            </span>
+            <br>
+            Mode: ${networkName(
+                selectedNetwork
+            )}
+            <br>
+            Ping: ${ping} ms`;
+
+    }
+
+    catch(err){
+
+        networkInfo.innerHTML =
+            `<span class="network-offline">
+                ● CONNECTION ERROR
+            </span>`;
+
+    }
+
+}
+
+
+/* =====================================================
+   START CAMERA
+===================================================== */
+
+async function initCamera(){
+
+    try{
+
+        errorBox.classList.remove(
+            "show"
+        );
+
+        showLoading(
+            "กำลังเปิดกล้อง..."
+        );
+
+
+        stopCamera();
+
+
+        const resolution =
+            resolutions[
+                resolutionSelect.value
+            ] ||
+            resolutions["1920x1080"];
+
+
+        const constraints = {
+
+            video:{
+
+                facingMode:{
+                    ideal:
+                        facingMode
+                },
+
+                width:{
+                    ideal:
+                        resolution.width
+                },
+
+                height:{
+                    ideal:
+                        resolution.height
+                },
+
+                frameRate:{
+                    ideal:60,
+                    max:60
                 }
 
-                const constraints = {
-                    video: {
-                        facingMode: facingMode,
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 },
-                        frameRate: { ideal: 60, max: 60 }
-                    },
-                    audio: false
+            },
+
+            audio:false
+
+        };
+
+
+        currentStream =
+            await navigator
+                .mediaDevices
+                .getUserMedia(
+                    constraints
+                );
+
+
+        video.srcObject =
+            currentStream;
+
+
+        videoTrack =
+            currentStream
+                .getVideoTracks()[0];
+
+
+        const settings =
+            videoTrack.getSettings
+                ? videoTrack.getSettings()
+                : {};
+
+
+        if(
+            settings.width &&
+            settings.height
+        ){
+
+            resolutionStatus
+                .textContent =
+                getResolutionLabel(
+                    settings.width,
+                    settings.height
+                );
+
+        }
+
+
+        /* CAMERA CAPABILITIES */
+
+        const capabilities =
+            videoTrack.getCapabilities
+                ? videoTrack.getCapabilities()
+                : {};
+
+
+        if(
+            capabilities.zoom
+        ){
+
+            zoomRange.min =
+                capabilities.zoom.min;
+
+            zoomRange.max =
+                capabilities.zoom.max;
+
+            zoomRange.step =
+                capabilities.zoom.step ||
+                .1;
+
+            zoomRange.value =
+                capabilities.zoom.min;
+
+            zoomValue.textContent =
+                Number(
+                    capabilities.zoom.min
+                ).toFixed(1) +
+                "x";
+
+        }
+
+
+        localStorage.setItem(
+            "preferred_resolution",
+            resolutionSelect.value
+        );
+
+
+        setupVDONinja();
+
+
+        hideLoading();
+
+    }
+
+    catch(err){
+
+        console.error(err);
+
+        hideLoading();
+
+
+        if(
+            err.name ===
+            "OverconstrainedError"
+        ){
+
+            if(
+                resolutionSelect.value !==
+                "1920x1080"
+            ){
+
+                resolutionSelect.value =
+                    "1920x1080";
+
+                setTimeout(
+                    initCamera,
+                    300
+                );
+
+                return;
+
+            }
+
+        }
+
+
+        errorText.textContent =
+            getCameraError(
+                err
+            );
+
+        errorBox.classList.add(
+            "show"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   STOP CAMERA
+===================================================== */
+
+function stopCamera(){
+
+    if(!currentStream)
+        return;
+
+
+    currentStream
+        .getTracks()
+        .forEach(
+            track =>
+                track.stop()
+        );
+
+
+    currentStream = null;
+
+    videoTrack = null;
+
+}
+
+
+/* =====================================================
+   CAMERA ERROR
+===================================================== */
+
+function getCameraError(err){
+
+    if(
+        err.name ===
+        "NotAllowedError"
+    ){
+
+        return(
+            "กรุณาอนุญาตสิทธิ์กล้อง " +
+            "ใน Browser"
+        );
+
+    }
+
+
+    if(
+        err.name ===
+        "NotFoundError"
+    ){
+
+        return(
+            "ไม่พบกล้องบนอุปกรณ์"
+        );
+
+    }
+
+
+    if(
+        err.name ===
+        "NotReadableError"
+    ){
+
+        return(
+            "กล้องกำลังถูกใช้งานโดยแอปอื่น"
+        );
+
+    }
+
+
+    return(
+        "ไม่สามารถเปิดกล้องได้: " +
+        err.message
+    );
+
+}
+
+
+/* =====================================================
+   RESOLUTION LABEL
+===================================================== */
+
+function getResolutionLabel(
+    width,
+    height
+){
+
+    if(
+        width >= 3840 &&
+        height >= 2160
+    )
+        return "4K";
+
+    if(
+        width >= 2560 &&
+        height >= 1440
+    )
+        return "2K";
+
+    if(
+        width >= 1920 &&
+        height >= 1080
+    )
+        return "1080p";
+
+    if(
+        width >= 1280 &&
+        height >= 720
+    )
+        return "720p";
+
+    return `${width}×${height}`;
+
+}
+
+
+/* =====================================================
+   VDO NINJA
+===================================================== */
+
+function setupVDONinja(){
+
+    const room =
+        "LIVE_DOCK_CAM1";
+
+    const push =
+        "CAM_SENDER_01";
+
+
+    const url =
+        "https://vdo.ninja/?" +
+        "push=" + push +
+        "&room=" + room +
+        "&quality=0" +
+        "&autostart" +
+        "&cleanoutput" +
+        "&ptz";
+
+
+    document
+        .getElementById(
+            "ninja-frame"
+        )
+        .src = url;
+
+}
+
+
+/* =====================================================
+   LOADING
+===================================================== */
+
+function showLoading(text){
+
+    loadingText.textContent =
+        text;
+
+    loading.classList.add(
+        "show"
+    );
+
+}
+
+
+function hideLoading(){
+
+    loading.classList.remove(
+        "show"
+    );
+
+}
+
+
+/* =====================================================
+   GRID
+===================================================== */
+
+document
+    .getElementById("btn-grid")
+    .onclick = function(){
+
+        document
+            .getElementById(
+                "grid-overlay"
+            )
+            .classList
+            .toggle("active");
+
+        this.classList.toggle(
+            "active"
+        );
+
+    };
+
+
+/* =====================================================
+   ZOOM PANEL
+===================================================== */
+
+document
+    .getElementById("btn-zoom")
+    .onclick = function(){
+
+        document
+            .getElementById(
+                "zoom-popup"
+            )
+            .classList
+            .toggle("show");
+
+        resolutionPopupClose();
+        networkPopupClose();
+
+        this.classList.toggle(
+            "active"
+        );
+
+    };
+
+
+/* =====================================================
+   ZOOM
+===================================================== */
+
+zoomRange.oninput =
+    async function(){
+
+        const value =
+            Number(
+                this.value
+            );
+
+
+        zoomValue.textContent =
+            value.toFixed(1) +
+            "x";
+
+
+        if(
+            videoTrack &&
+            videoTrack.applyConstraints
+        ){
+
+            try{
+
+                await videoTrack
+                    .applyConstraints({
+
+                        advanced:[
+                            {
+                                zoom:value
+                            }
+                        ]
+
+                    });
+
+            }
+
+            catch(err){
+
+                console.log(
+                    "Zoom unsupported"
+                );
+
+            }
+
+        }
+
+    };
+
+
+/* =====================================================
+   FOCUS
+===================================================== */
+
+document
+    .getElementById("btn-focus")
+    .onclick =
+    async function(){
+
+        isFocusLocked =
+            !isFocusLocked;
+
+
+        this.classList.toggle(
+            "active",
+            isFocusLocked
+        );
+
+
+        if(
+            videoTrack &&
+            videoTrack.applyConstraints
+        ){
+
+            try{
+
+                await videoTrack
+                    .applyConstraints({
+
+                        advanced:[
+                            {
+                                focusMode:
+                                    isFocusLocked
+                                    ? "manual"
+                                    : "continuous"
+                            }
+                        ]
+
+                    });
+
+            }
+
+            catch(err){
+
+                console.log(
+                    "Focus unsupported"
+                );
+
+            }
+
+        }
+
+    };
+
+
+/* =====================================================
+   FLASH
+===================================================== */
+
+document
+    .getElementById("btn-flash")
+    .onclick =
+    async function(){
+
+        if(!videoTrack)
+            return;
+
+
+        const newState =
+            !isFlashOn;
+
+
+        try{
+
+            await videoTrack
+                .applyConstraints({
+
+                    advanced:[
+                        {
+                            torch:
+                                newState
+                        }
+                    ]
+
+                });
+
+
+            isFlashOn =
+                newState;
+
+
+            this.classList.toggle(
+                "active",
+                isFlashOn
+            );
+
+        }
+
+        catch(err){
+
+            alert(
+                "อุปกรณ์นี้ไม่รองรับ Flash/Torch"
+            );
+
+        }
+
+    };
+
+
+/* =====================================================
+   FLIP
+===================================================== */
+
+document
+    .getElementById("btn-flip")
+    .onclick =
+    async function(){
+
+        facingMode =
+            facingMode ===
+            "user"
+            ? "environment"
+            : "user";
+
+
+        localStorage.setItem(
+            "preferred_lens",
+            facingMode
+        );
+
+
+        showLoading(
+            "กำลังสลับกล้อง..."
+        );
+
+
+        await initCamera();
+
+    };
+
+
+/* =====================================================
+   RESOLUTION PANEL
+===================================================== */
+
+const resolutionPopup =
+    document.getElementById(
+        "resolution-popup"
+    );
+
+
+document
+    .getElementById("btn-resolution")
+    .onclick = function(){
+
+        resolutionPopup
+            .classList
+            .toggle("show");
+
+        document
+            .getElementById(
+                "zoom-popup"
+            )
+            .classList
+            .remove("show");
+
+        networkPopupClose();
+
+        this.classList.toggle(
+            "active"
+        );
+
+    };
+
+
+/* =====================================================
+   CHANGE RESOLUTION
+===================================================== */
+
+resolutionSelect.onchange =
+    async function(){
+
+        showLoading(
+            "กำลังเปลี่ยนความละเอียด..."
+        );
+
+        resolutionPopup
+            .classList
+            .remove("show");
+
+
+        document
+            .getElementById(
+                "btn-resolution"
+            )
+            .classList
+            .remove("active");
+
+
+        await initCamera();
+
+    };
+
+
+/* =====================================================
+   NETWORK PANEL
+===================================================== */
+
+document
+    .getElementById("btn-network")
+    .onclick = function(){
+
+        networkPopup
+            .classList
+            .toggle("show");
+
+        document
+            .getElementById(
+                "zoom-popup"
+            )
+            .classList
+            .remove("show");
+
+        resolutionPopupClose();
+
+        this.classList.toggle(
+            "active"
+        );
+
+        updateNetworkStatus();
+
+    };
+
+
+/* =====================================================
+   NETWORK OPTIONS
+===================================================== */
+
+document
+    .querySelectorAll(
+        ".network-option"
+    )
+    .forEach(
+        option => {
+
+            option.onclick =
+                function(){
+
+                    selectNetwork(
+                        this.dataset.network
+                    );
+
                 };
 
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElem.srcObject = currentStream;
-                videoTrack = currentStream.getVideoTracks()[0];
+        }
+    );
 
-                // ตรวจสอบความสามารถของกล้องที่เบราว์เซอร์รองรับ (Hardware capabilities)
-                const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
-                
-                // ปรับค่า Zoom Min/Max ให้ตรงกับตัวกล้องมือถือ
-                if (capabilities.zoom) {
-                    zoomRange.min = capabilities.zoom.min;
-                    zoomRange.max = capabilities.zoom.max;
-                    zoomRange.step = capabilities.zoom.step;
-                }
 
-                // เชื่อมต่อไปยัง VDO.Ninja Engine ยิงท่อ push ไปยัง Control Center
-                setupVDONinja();
+/* =====================================================
+   NETWORK CLOSE
+===================================================== */
 
-            } catch (err) {
-                console.error("Camera Access Error: ", err);
-                alert("ไม่สามารถเข้าถึงกล้องได้ โปรดตรวจสอบการอนุญาตสิทธิ์");
-            }
+function networkPopupClose(){
+
+    networkPopup
+        .classList
+        .remove("show");
+
+    document
+        .getElementById(
+            "btn-network"
+        )
+        .classList
+        .remove("active");
+
+}
+
+
+function resolutionPopupClose(){
+
+    resolutionPopup
+        .classList
+        .remove("show");
+
+    document
+        .getElementById(
+            "btn-resolution"
+        )
+        .classList
+        .remove("active");
+
+}
+
+
+/* =====================================================
+   TEST NETWORK
+===================================================== */
+
+document
+    .getElementById(
+        "network-test"
+    )
+    .onclick =
+    testNetwork;
+
+
+/* =====================================================
+   ONLINE / OFFLINE
+===================================================== */
+
+window.addEventListener(
+    "online",
+    updateNetworkStatus
+);
+
+window.addEventListener(
+    "offline",
+    updateNetworkStatus
+);
+
+
+/* =====================================================
+   FPS
+===================================================== */
+
+setInterval(
+    function(){
+
+        if(!videoTrack)
+            return;
+
+
+        const settings =
+            videoTrack.getSettings
+                ? videoTrack.getSettings()
+                : {};
+
+
+        if(
+            settings.frameRate
+        ){
+
+            document
+                .getElementById(
+                    "fps"
+                )
+                .textContent =
+                Math.round(
+                    settings.frameRate
+                ) +
+                " FPS";
+
         }
 
-        // 2. ตั้งค่า VDO.Ninja Integration
-        function setupVDONinja() {
-            const roomName = "LIVE_DOCK_CAM1"; // ชื่อห้องเชื่อมต่อกับ Control Center
-            const pushStreamId = "CAM_SENDER_01";
-            
-            // Parameter &ptz &quality=0 เพื่อภาพคมชัดสูงและควบคุมระยะได้
-            const ninjaUrl = `https://vdo.ninja/?push=${pushStreamId}&room=${roomName}&quality=0&autostart&cleanoutput&ptz`;
-            document.getElementById('ninja-frame').src = ninjaUrl;
-        }
+    },
 
-        // 3. ปรับ Zoom เรียลไทม์
-        zoomRange.addEventListener('input', async (e) => {
-            const value = e.target.value;
-            zoomVal.innerText = `${parseFloat(value).toFixed(1)}x`;
-            if (videoTrack && 'applyConstraints' in videoTrack) {
-                try {
-                    await videoTrack.applyConstraints({ advanced: [{ zoom: value }] });
-                } catch (err) {
-                    console.log("Zoom not supported on this device track");
-                }
-            }
-        });
+    2000
+);
 
-        // 4. ล็อคโฟกัส (Focus Lock)
-        document.getElementById('btn-focus').addEventListener('click', async function() {
-            isFocusLocked = !isFocusLocked;
-            this.classList.toggle('active', isFocusLocked);
 
-            if (videoTrack && 'applyConstraints' in videoTrack) {
-                try {
-                    await videoTrack.applyConstraints({
-                        advanced: [{ focusMode: isFocusLocked ? 'manual' : 'continuous' }]
-                    });
-                } catch (err) {
-                    console.log("Focus mode change not supported");
-                }
-            }
-        });
+/* =====================================================
+   AUTO HIDE
+===================================================== */
 
-        // 5. สลับเปิด/ปิด ไฟแฟลช (Torch)
-        document.getElementById('btn-flash').addEventListener('click', async function() {
-            isFlashOn = !isFlashOn;
-            this.classList.toggle('active', isFlashOn);
+function resetUI(){
 
-            if (videoTrack && 'applyConstraints' in videoTrack) {
-                try {
-                    await videoTrack.applyConstraints({
-                        advanced: [{ torch: isFlashOn }]
-                    });
-                } catch (err) {
-                    alert("อุปกรณ์นี้ไม่รองรับการเปิดไฟแฟลชผ่านเว็บ Browser");
-                }
-            }
-        });
+    document
+        .getElementById(
+            "control-dock"
+        )
+        .classList
+        .remove("ui-hidden");
 
-        // 6. เปิด/ปิด เส้น Grid 9 ช่อง
-        document.getElementById('btn-grid').addEventListener('click', function() {
-            gridOverlay.classList.toggle('active');
-            this.classList.toggle('active');
-        });
 
-        // 7. Toggle Zoom Control Popup
-        document.getElementById('btn-zoom').addEventListener('click', function() {
-            zoomContainer.classList.toggle('show');
-            this.classList.toggle('active');
-        });
+    document
+        .getElementById(
+            "status-bar"
+        )
+        .classList
+        .remove("ui-hidden");
 
-        // 8. สลับกล้องหน้า/หลัง (Memory Lens support)
-        document.getElementById('btn-flip').addEventListener('click', () => {
-            facingMode = (facingMode === "user") ? "environment" : "user";
-            localStorage.setItem('preferred_lens', facingMode); // บันทึกลง Memory
-            initCamera();
-        });
 
-        // 9. ระบบ Auto-Hide UI เมื่อไม่ได้แตะหน้าจอ (Ergonomic Support)
-        function resetUINodeTimer() {
-            document.getElementById('control-dock').classList.remove('ui-hidden');
-            document.getElementById('status-bar').classList.remove('ui-hidden');
+    clearTimeout(
+        uiTimer
+    );
 
-            clearTimeout(uiTimeout);
-            uiTimeout = setTimeout(() => {
-                document.getElementById('control-dock').classList.add('ui-hidden');
-                document.getElementById('status-bar').classList.add('ui-hidden');
-                zoomContainer.classList.remove('show');
-                document.getElementById('btn-zoom').classList.remove('active');
-            }, 5000); // 5 วินาที
-        }
 
-        document.getElementById('app-viewport').addEventListener('touchstart', resetUINodeTimer);
-        document.getElementById('app-viewport').addEventListener('mousemove', resetUINodeTimer);
+    uiTimer =
+        setTimeout(
+            function(){
 
-        // โหลดค่ากล้องล่าสุดที่เคยเลือกไว้ (Memory Lens)
-        const savedLens = localStorage.getItem('preferred_lens');
-        if (savedLens) facingMode = savedLens;
+                document
+                    .getElementById(
+                        "control-dock"
+                    )
+                    .classList
+                    .add("ui-hidden");
 
-        // เริ่มต้นการทำงานและ Lucide Icons
-        lucide.createIcons();
-        initCamera();
-        resetUINodeTimer();
-    </script>
+
+                document
+                    .getElementById(
+                        "status-bar"
+                    )
+                    .classList
+                    .add("ui-hidden");
+
+
+                document
+                    .querySelectorAll(
+                        ".popup"
+                    )
+                    .forEach(
+                        p =>
+                            p.classList
+                             .remove(
+                                 "show"
+                             )
+                    );
+
+
+                document
+                    .querySelectorAll(
+                        ".btn-action"
+                    )
+                    .forEach(
+                        b =>
+                            b.classList
+                             .remove(
+                                 "active"
+                             )
+                    );
+
+            },
+
+            5000
+        );
+
+}
+
+
+document
+    .getElementById(
+        "app-viewport"
+    )
+    .addEventListener(
+        "touchstart",
+        resetUI,
+        {passive:true}
+    );
+
+
+document
+    .getElementById(
+        "app-viewport"
+    )
+    .addEventListener(
+        "mousemove",
+        resetUI
+    );
+
+
+/* =====================================================
+   RETRY
+===================================================== */
+
+document
+    .getElementById("retry")
+    .onclick =
+    initCamera;
+
+
+/* =====================================================
+   INITIALIZE
+===================================================== */
+
+lucide.createIcons();
+
+selectNetwork(
+    selectedNetwork
+);
+
+initCamera();
+
+resetUI();
+
+</script>
+
 </body>
 </html>
