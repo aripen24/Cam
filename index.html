@@ -29,15 +29,28 @@
             justify-content: space-between;
         }
 
-        /* iframe VDO.Ninja เต็มจอด้านหลัง */
-        #ninja-iframe {
+        /* Video element หลักสำหรับพรีวิว และรับ Stream Direct */
+        #local-video {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            border: none;
+            object-fit: cover;
             z-index: 1;
+            background: #000;
+        }
+
+        /* iframe VDO.Ninja ซ่อนฉากหลังไว้ส่งสัญญาณอย่างเดียว */
+        #ninja-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
         }
 
         /* Overlay แถบบน */
@@ -91,8 +104,8 @@
             gap: 12px;
         }
         .zoom-slider-vertical {
-            writing-mode: bt-lr; /* IE/Edge */
-            -webkit-appearance: slider-vertical; /* WebKit */
+            writing-mode: bt-lr;
+            -webkit-appearance: slider-vertical;
             width: 8px;
             height: 160px;
             accent-color: #00f59b;
@@ -227,19 +240,22 @@
             <div class="status-badge" id="stream-id-display">ID: ---</div>
         </div>
 
-        <!-- VDO.Ninja Engine ใน IFrame -->
+        <!-- หน้าจอพรีวิวภาพจริงจาก Native MediaStream -->
+        <video id="local-video" autoplay playsinline muted></video>
+
+        <!-- iframe VDO.Ninja Engine -->
         <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
 
         <!-- หลอดซูมบนหน้าจอหลัก (ด้านขวา) -->
         <div class="zoom-overlay">
             <span class="zoom-label" id="main-zoom-val">1.0x</span>
-            <input type="range" class="zoom-slider-vertical" id="main-zoom-slider" min="1" max="5" step="0.1" value="1" oninput="changeZoom(this.value)">
+            <input type="range" class="zoom-slider-vertical" id="main-zoom-slider" min="1" max="5" step="0.1" value="1" oninput="applyHardwareZoom(this.value)">
             <span style="font-size: 12px;">🔍</span>
         </div>
 
         <!-- แถบปุ่มควบคุมด้านล่าง -->
         <div class="controls-bottom">
-            <button class="btn-action" onclick="toggleCamera()" title="สลับกล้อง หน้า/หลัง">🔄</button>
+            <button class="btn-action" onclick="switchCameraQuick()" title="สลับกล้อง">🔄</button>
             <button class="btn-action" onclick="toggleMute()" id="mute-btn" title="เปิด/ปิด ไมค์">🎙️</button>
             <button class="btn-action" onclick="toggleTorch()" id="torch-btn" title="เปิด/ปิด ไฟฉาย">🔦</button>
             <button class="btn-action" onclick="toggleMirror()" id="mirror-btn" title="กลับด้านภาพ">🪞</button>
@@ -253,11 +269,11 @@
                 <button class="btn-close" onclick="toggleSettings()">✖</button>
             </div>
 
-            <!-- เลือกกล้อง (รองรับทุกเลนส์ของมือถือ) -->
+            <!-- เลือกกล้อง (รองรับเลนส์ Ultra-wide, Wide, Telephoto) -->
             <div class="setting-group">
                 <label>เลือกอุปกรณ์กล้อง (Camera Source)</label>
                 <div class="setting-control">
-                    <select id="camera-select" onchange="changeVideoDevice(this.value)">
+                    <select id="camera-select" onchange="selectHardwareCamera(this.value)">
                         <option value="">กำลังโหลดรายการกล้อง...</option>
                     </select>
                 </div>
@@ -306,7 +322,7 @@
             <div class="setting-group">
                 <label>เลือกไมโครโฟน (Audio Source)</label>
                 <div class="setting-control">
-                    <select id="mic-select" onchange="changeAudioDevice(this.value)">
+                    <select id="mic-select" onchange="selectHardwareMic(this.value)">
                         <option value="">กำลังโหลดรายการไมค์...</option>
                     </select>
                 </div>
@@ -340,9 +356,16 @@
     </div>
 
     <script>
+        let currentStream = null;
+        let videoTrack = null;
+        let videoDevicesList = [];
+        let currentCamIndex = 0;
+
         let isMuted = false;
         let isTorchOn = false;
         let isMirrored = false;
+
+        const videoElement = document.getElementById('local-video');
         const iframe = document.getElementById('ninja-iframe');
 
         // ดึง URL Parameters
@@ -352,29 +375,157 @@
 
         document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Unknown'}`;
 
-        // การตั้งค่าตามโหมดการเชื่อมต่อ
         function getQualitySettings(q) {
             if (q === '0') {
-                return { label: '🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำ)', bitrate: 6000, maxfps: 60, res: '1920x1080' };
+                return { label: '🔌 USB Mode', bitrate: 6000, maxfps: 60, res: '1920x1080' };
             } else if (q === '1') {
-                return { label: '📶 Wi-Fi Mode (เสถียร / สมดุล)', bitrate: 3500, maxfps: 30, res: '1280x720' };
+                return { label: '📶 Wi-Fi Mode', bitrate: 3500, maxfps: 30, res: '1280x720' };
             } else {
-                return { label: '📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)', bitrate: 1500, maxfps: 30, res: '1280x720' };
+                return { label: '📡 4G/5G Mode', bitrate: 1500, maxfps: 30, res: '1280x720' };
             }
         }
 
         let currentQualitySettings = getQualitySettings(initialQuality);
-        
-        // ตั้งค่าตัวเลือกในหน้า UI ให้ตรงกับพารามิเตอร์เริ่มต้น
-        document.getElementById('connection-mode-select').value = initialQuality;
-        document.getElementById('bitrate-slider').value = currentQualitySettings.bitrate;
-        document.getElementById('bitrate-val').innerText = `${currentQualitySettings.bitrate.toLocaleString()} k`;
-        document.getElementById('fps-select').value = currentQualitySettings.maxfps.toString();
+
+        // ดึง Stream กล้องตรงจาก Native WebRTC
+        async function startNativeCamera(deviceId = null) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' },
+                audio: true
+            };
+
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = currentStream;
+                videoTrack = currentStream.getVideoTracks()[0];
+
+                // ตรวจสอบและตั้งค่า Hardware Zoom
+                setupZoomCapability(videoTrack);
+
+                // โหลดอุปกรณ์ทั้งหมดลง Select Dropdown
+                await listHardwareDevices();
+
+                // อัปเดต Select ให้ตรงกับตัวที่ใช้อยู่
+                if (videoTrack) {
+                    const settings = videoTrack.getSettings();
+                    if (settings.deviceId) {
+                        document.getElementById('camera-select').value = settings.deviceId;
+                    }
+                }
+
+                // ส่งสัญญาณ VDO.Ninja เมื่อพร้อม
+                initNinjaIframe();
+
+            } catch (err) {
+                console.error("Camera access error:", err);
+                alert("ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตสิทธิ์การใช้กล้อง");
+            }
+        }
+
+        // จัดการเรื่อง Zoom Capabilities ตรงเข้า Hardware
+        function setupZoomCapability(track) {
+            if (!track) return;
+            
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+            const zoomSlider = document.getElementById('main-zoom-slider');
+
+            if ('zoom' in capabilities) {
+                zoomSlider.min = capabilities.zoom.min;
+                zoomSlider.max = capabilities.zoom.max;
+                zoomSlider.step = capabilities.zoom.step || 0.1;
+                zoomSlider.value = capabilities.zoom.min;
+                document.getElementById('main-zoom-val').innerText = `${zoomSlider.value}x`;
+                zoomSlider.disabled = false;
+            } else {
+                // หากฮาร์ดแวร์ไม่รองรับการซูมแบบ Native
+                zoomSlider.disabled = false; // เปิดให้ใช้ Digital Scale ซูมแทน
+            }
+        }
+
+        // ปรับซูมเข้ากล้องตรงๆ
+        async function applyHardwareZoom(val) {
+            document.getElementById('main-zoom-val').innerText = `${parseFloat(val).toFixed(1)}x`;
+
+            if (videoTrack) {
+                const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+
+                if ('zoom' in capabilities) {
+                    try {
+                        await videoTrack.applyConstraints({
+                            advanced: [{ zoom: parseFloat(val) }]
+                        });
+                    } catch (e) {
+                        console.warn("Hardware zoom error, fallback to transform:", e);
+                        videoElement.style.transform = `scale(${val})`;
+                    }
+                } else {
+                    // Digital Zoom Fallback
+                    videoElement.style.transform = `scale(${val})`;
+                }
+            }
+        }
+
+        // ดึงรายการกล้องทุกตัวบนมือถือ (Ultra-wide, Main, Telephoto)
+        async function listHardwareDevices() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cameraSelect = document.getElementById('camera-select');
+            const micSelect = document.getElementById('mic-select');
+
+            cameraSelect.innerHTML = '';
+            micSelect.innerHTML = '';
+            videoDevicesList = [];
+
+            let camCount = 1;
+            let micCount = 1;
+
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+
+                if (device.kind === 'videoinput') {
+                    videoDevicesList.push(device.deviceId);
+                    option.text = device.label || `กล้องตัวที่ ${camCount++}`;
+                    cameraSelect.appendChild(option);
+                } else if (device.kind === 'audioinput') {
+                    option.text = device.label || `ไมโครโฟน ${micCount++}`;
+                    micSelect.appendChild(option);
+                }
+            });
+        }
+
+        // สลับกล้องแบบเจาะจง ID จาก Dropdown
+        function selectHardwareCamera(deviceId) {
+            if (deviceId) {
+                startNativeCamera(deviceId);
+                sendNinjaCommand({ action: 'changeVideoTarget', value: deviceId });
+            }
+        }
+
+        // สลับกล้องวนแบบปุ่มกดเร็ว
+        function switchCameraQuick() {
+            if (videoDevicesList.length > 1) {
+                currentCamIndex = (currentCamIndex + 1) % videoDevicesList.length;
+                const targetDeviceId = videoDevicesList[currentCamIndex];
+                document.getElementById('camera-select').value = targetDeviceId;
+                selectHardwareCamera(targetDeviceId);
+            } else {
+                sendNinjaCommand({ action: 'changeVideoTarget' });
+            }
+        }
+
+        function selectHardwareMic(deviceId) {
+            if (deviceId) {
+                sendNinjaCommand({ action: 'changeAudioTarget', value: deviceId });
+            }
+        }
 
         // เริ่มต้นสร้าง VDO.Ninja Engine
-        function initNinja() {
+        function initNinjaIframe() {
             if (!pushId) {
-                alert('ไม่พบ Stream ID! กรุณาสแกน QR Code ใหม่อีกครั้ง');
                 document.getElementById('status-text').innerText = 'NO STREAM ID';
                 return;
             }
@@ -385,39 +536,16 @@
             iframe.src = ninjaUrl;
         }
 
-        // ขอสิทธิ์และดึงอุปกรณ์กล้อง/ไมค์ โดยตรงจากเบราว์เซอร์
-        async function fetchAvailableDevices() {
-            try {
-                // ขออนุญาตเพื่ออ่าน label/ชื่อกล้องได้ถูกต้อง
-                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                populateDeviceLists(devices);
-            } catch (err) {
-                // หากติดข้อจำกัด ให้ส่งคำสั่งผ่าน VDO.Ninja แทน
-                sendNinjaCommand({ action: 'getDevices' });
-            }
-        }
-
-        // รับข้อมูลสถานะกลับมาจาก VDO.Ninja API
         window.addEventListener('message', function(e) {
             if (e.source !== iframe.contentWindow) return;
 
             try {
                 const data = JSON.parse(e.data);
-
                 if (data.action === 'system' && data.value === 'connected') {
                     document.getElementById('status-dot').classList.add('active');
                     document.getElementById('status-text').innerText = 'LIVE ONLINE';
-
-                    fetchAvailableDevices();
                 }
-
-                if (data.action === 'deviceList') {
-                    populateDeviceLists(data.value);
-                }
-            } catch (err) {
-                // Ignore non-JSON
-            }
+            } catch (err) {}
         });
 
         function sendNinjaCommand(cmdObject) {
@@ -426,84 +554,62 @@
             }
         }
 
-        // === ฟังก์ชันสลับโหมดการเชื่อมต่อ (Connection Mode) ===
-
-        function changeConnectionMode(modeKey) {
-            const bitrateSelect = document.getElementById('bitrate-select');
-
-            if (modeKey === 'custom') return;
-
-            const settings = getQualitySettings(modeKey);
-            currentQualitySettings = settings;
-
-            // อัปเดต UI ข้อความและพารามิเตอร์
-            document.getElementById('bitrate-slider').value = settings.bitrate;
-            updateBitrateSliderLabel(settings.bitrate);
-            document.getElementById('fps-select').value = settings.maxfps.toString();
-            bitrateSelect.value = 'auto';
-
-            // ส่งคำสั่งปรับการตั้งค่าไปยัง VDO.Ninja Engine แบบ Real-time
-            sendNinjaCommand({ action: 'bitrate', value: settings.bitrate });
-            sendNinjaCommand({ action: 'framerate', value: settings.maxfps });
-
-            const [w, h] = settings.res.split('x');
-            sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
-        }
-
-        // === ฟังก์ชันปุ่มควบคุมหลัก ===
-
-        function toggleCamera() {
-            sendNinjaCommand({ action: 'changeVideoTarget' });
-        }
-
+        // Controls
         function toggleMute() {
             isMuted = !isMuted;
+            if (currentStream) {
+                currentStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+            }
             sendNinjaCommand({ action: 'mute', value: isMuted });
-
             const btn = document.getElementById('mute-btn');
             btn.innerText = isMuted ? '🔇' : '🎙️';
             btn.classList.toggle('active-state', isMuted);
         }
 
-        function toggleTorch() {
+        async function toggleTorch() {
             isTorchOn = !isTorchOn;
+            if (videoTrack) {
+                const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+                if ('torch' in capabilities) {
+                    try {
+                        await videoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+                    } catch (e) { console.warn(e); }
+                }
+            }
             sendNinjaCommand({ action: 'torch', value: isTorchOn });
-
-            const btn = document.getElementById('torch-btn');
-            btn.classList.toggle('active-state', isTorchOn);
+            document.getElementById('torch-btn').classList.toggle('active-state', isTorchOn);
         }
 
         function toggleMirror() {
             isMirrored = !isMirrored;
+            videoElement.style.transform = isMirrored ? 'scaleX(-1)' : 'scaleX(1)';
             sendNinjaCommand({ action: 'mirror', value: isMirrored });
-
-            const btn = document.getElementById('mirror-btn');
-            btn.classList.toggle('active-state', isMirrored);
+            document.getElementById('mirror-btn').classList.toggle('active-state', isMirrored);
         }
 
         function toggleSettings() {
             const panel = document.getElementById('settings-panel');
             panel.classList.toggle('open');
-            if (panel.classList.contains('open')) {
-                fetchAvailableDevices();
-            }
         }
 
-        // === ฟังก์ชันจัดการ BITRATE ===
+        function changeConnectionMode(modeKey) {
+            if (modeKey === 'custom') return;
+            const settings = getQualitySettings(modeKey);
+            currentQualitySettings = settings;
+
+            document.getElementById('bitrate-slider').value = settings.bitrate;
+            updateBitrateSliderLabel(settings.bitrate);
+            document.getElementById('fps-select').value = settings.maxfps.toString();
+
+            sendNinjaCommand({ action: 'bitrate', value: settings.bitrate });
+            sendNinjaCommand({ action: 'framerate', value: settings.maxfps });
+        }
 
         function changeBitratePreset(val) {
             let targetBitrate = currentQualitySettings.bitrate;
-
-            if (val === 'auto') {
-                targetBitrate = currentQualitySettings.bitrate;
-            } else if (val !== 'custom') {
-                targetBitrate = parseInt(val);
-                document.getElementById('connection-mode-select').value = 'custom';
-            }
-
+            if (val !== 'auto' && val !== 'custom') targetBitrate = parseInt(val);
             document.getElementById('bitrate-slider').value = targetBitrate;
             updateBitrateSliderLabel(targetBitrate);
-
             sendNinjaCommand({ action: 'bitrate', value: targetBitrate });
         }
 
@@ -512,71 +618,21 @@
         }
 
         function changeBitrateValue(val) {
-            document.getElementById('bitrate-select').value = 'custom';
-            document.getElementById('connection-mode-select').value = 'custom';
             sendNinjaCommand({ action: 'bitrate', value: parseInt(val) });
-        }
-
-        // === ฟังก์ชันการตั้งค่ากล้องเชิงลึก (Settings) ===
-
-        function populateDeviceLists(devices) {
-            const cameraSelect = document.getElementById('camera-select');
-            const micSelect = document.getElementById('mic-select');
-
-            cameraSelect.innerHTML = '';
-            micSelect.innerHTML = '';
-
-            let camIndex = 1;
-            let micIndex = 1;
-
-            devices.forEach(device => {
-                const option = document.createElement('option');
-                option.value = device.deviceId;
-
-                if (device.kind === 'videoinput') {
-                    let labelName = device.label || `กล้องตัวที่ ${camIndex++}`;
-                    option.text = labelName;
-                    cameraSelect.appendChild(option);
-                } else if (device.kind === 'audioinput') {
-                    let labelName = device.label || `ไมโครโฟน ${micIndex++}`;
-                    option.text = labelName;
-                    micSelect.appendChild(option);
-                }
-            });
-        }
-
-        function changeVideoDevice(deviceId) {
-            if (deviceId) {
-                // สลับไปยังกล้องเฉพาะตาม ID
-                sendNinjaCommand({ action: 'changeVideoTarget', value: deviceId });
-            }
-        }
-
-        function changeAudioDevice(deviceId) {
-            if (deviceId) {
-                sendNinjaCommand({ action: 'changeAudioTarget', value: deviceId });
-            }
         }
 
         function changeResolution(res) {
             if (res === 'default') return;
-            document.getElementById('connection-mode-select').value = 'custom';
             const [w, h] = res.split('x');
             sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
         }
 
         function changeFPS(fps) {
-            document.getElementById('connection-mode-select').value = 'custom';
             sendNinjaCommand({ action: 'framerate', value: parseInt(fps) });
         }
 
-        function changeZoom(val) {
-            document.getElementById('main-zoom-val').innerText = `${val}x`;
-            sendNinjaCommand({ action: 'zoom', value: parseFloat(val) });
-        }
-
         window.onload = () => {
-            initNinja();
+            startNativeCamera();
         };
     </script>
 </body>
