@@ -3,42 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OBS Ninja Mobile Camera Sender Pro</title>
+    <title>OBS Ninja Pro Mobile Camera + Tally Light</title>
     <style>
-        :root {
-            --primary: #00f59b;
-            --danger: #ff4444;
-            --bg-dark: rgba(10, 10, 15, 0.75);
-            --border-light: rgba(255, 255, 255, 0.15);
-        }
-
         * {
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
+        }
+        body, html {
             margin: 0;
             padding: 0;
-        }
-
-        body, html {
             width: 100%;
             height: 100%;
-            background-color: #000;
-            color: #fff;
+            background-color: #000000;
+            color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             overflow: hidden;
         }
-
-        .app-container {
+        .container {
             position: relative;
             width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            border: 0px solid transparent;
+            transition: border 0.3s ease;
         }
 
-        /* IFrame VDO.Ninja (เบื้องหลัง) */
+        /* 🔴 สไตล์สำหรับ Tally Light (ON AIR Status) */
+        .container.on-air {
+            border: 8px solid #ff0000;
+            box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.8);
+            animation: pulse-border 1.5s infinite alternate;
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: #ff0000; box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.6); }
+            100% { border-color: #990000; box-shadow: inset 0 0 30px rgba(255, 0, 0, 0.9); }
+        }
+
+        /* แถบเตือน ON AIR ตัวหนาด้านบนสุด */
+        .tally-banner {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff0000;
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 2px;
+            padding: 4px 20px;
+            border-radius: 0 0 12px 12px;
+            z-index: 30;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5);
+            animation: blink 1s infinite;
+        }
+        .container.on-air .tally-banner {
+            display: block;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.7; }
+        }
+
+        /* iframe VDO.Ninja เต็มจอด้านหลัง */
         #ninja-iframe {
             position: absolute;
             top: 0;
@@ -49,552 +80,499 @@
             z-index: 1;
         }
 
-        /* UI Overlays */
-        .overlay-top, .overlay-bottom, .side-controls {
+        /* Overlay แถบบน */
+        .overlay {
             position: relative;
             z-index: 10;
-        }
-
-        /* Header / Top Overlay */
-        .overlay-top {
-            padding: 12px 16px;
+            padding: 16px;
+            padding-top: 24px;
             background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        .badge-group {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
         .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: var(--bg-dark);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-light);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 6px 12px;
             border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
         }
-
+        .status-badge.on-air-badge {
+            background: rgba(255, 0, 0, 0.8);
+            border-color: #ff4444;
+            color: #fff;
+        }
         .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background-color: #888;
-            transition: background-color 0.3s;
+            background-color: #ff4444;
         }
-
         .dot.active {
-            background-color: var(--primary);
-            box-shadow: 0 0 8px var(--primary);
+            background-color: #00f59b;
+            box-shadow: 0 0 8px #00f59b;
+        }
+        .container.on-air .dot.active {
+            background-color: #ffffff;
+            box-shadow: 0 0 8px #ffffff;
         }
 
-        .dot.live {
-            background-color: var(--danger);
-            box-shadow: 0 0 8px var(--danger);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.4; }
-            100% { opacity: 1; }
-        }
-
-        /* Telemetry Dashboard */
-        .telemetry-bar {
-            position: absolute;
-            top: 55px;
-            left: 16px;
+        /* แถบควบคุมด้านล่าง */
+        .controls-bottom {
+            position: relative;
             z-index: 10;
-            background: var(--bg-dark);
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            padding: 6px 10px;
-            font-size: 10px;
-            font-family: monospace;
-            display: flex;
-            gap: 12px;
-            color: #aaa;
-        }
-        .telemetry-bar span b { color: #fff; }
-
-        /* Camera Sliders Side Panel */
-        .side-controls {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            background: var(--bg-dark);
-            backdrop-filter: blur(10px);
-            padding: 12px 8px;
-            border-radius: 16px;
-            border: 1px solid var(--border-light);
-        }
-
-        .slider-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .slider-group label {
-            font-size: 10px;
-            font-weight: bold;
-            color: var(--primary);
-        }
-
-        .slider-group input[type="range"] {
-            writing-mode: bt-lr; /* IE/Edge */
-            appearance: slider-vertical;
-            width: 20px;
-            height: 100px;
-            accent-color: var(--primary);
-            cursor: pointer;
-        }
-
-        /* Bottom Controls */
-        .overlay-bottom {
-            padding: 16px 20px 24px 20px;
-            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .audio-control-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--bg-dark);
-            backdrop-filter: blur(8px);
-            padding: 6px 12px;
-            border-radius: 20px;
-            border: 1px solid var(--border-light);
-        }
-
-        .audio-control-row label { font-size: 12px; }
-        .audio-control-row input { flex: 1; accent-color: var(--primary); }
-
-        .btn-row {
+            padding: 20px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
             display: flex;
             justify-content: space-around;
             align-items: center;
         }
-
         .btn-action {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-light);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 18px;
             cursor: pointer;
             transition: all 0.2s;
         }
-
-        .btn-action:active { transform: scale(0.9); }
-        .btn-action.active { background: var(--primary); color: #000; }
-        .btn-action:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        .btn-live {
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            background: var(--danger);
-            border: 3px solid #fff;
-            font-weight: bold;
-            font-size: 12px;
-            color: #fff;
-            box-shadow: 0 0 12px rgba(255, 68, 68, 0.5);
+        .btn-action:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.4);
         }
-        .btn-live.is-streaming {
-            background: #222;
-            border-color: var(--danger);
-            color: var(--danger);
+        .btn-action.active-state {
+            background: rgba(0, 245, 155, 0.4);
+            border-color: #00f59b;
+        }
+        .btn-action.tally-active {
+            background: rgba(255, 0, 0, 0.6);
+            border-color: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
         }
 
-        /* Dynamic Info Banner */
-        .info-banner {
+        /* กล่องแจ้งเตือนกลางจอ */
+        .info-panel {
             position: absolute;
-            top: 50%;
+            top: 40%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 5;
             text-align: center;
             background: rgba(0, 0, 0, 0.8);
             padding: 20px;
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-light);
-            width: 85%;
-            max-width: 340px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            width: 80%;
+            max-width: 320px;
             pointer-events: none;
             transition: opacity 0.5s ease;
         }
+        .info-panel h2 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #00f59b;
+        }
+        .info-panel p {
+            margin: 4px 0;
+            font-size: 12px;
+            color: #ccc;
+        }
 
-        .info-banner h2 { font-size: 16px; color: var(--primary); margin-bottom: 8px; }
-        .info-banner p { font-size: 12px; color: #ccc; margin: 3px 0; }
+        /* แผงเมนูตั้งค่ากล้อง */
+        .settings-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 75vh;
+            background: rgba(18, 18, 20, 0.95);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px 20px 0 0;
+            z-index: 20;
+            padding: 20px;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+        .settings-panel.open {
+            transform: translateY(0);
+        }
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+        .settings-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #00f59b;
+        }
+        .btn-close {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .setting-group {
+            margin-bottom: 16px;
+        }
+        .setting-group label {
+            display: block;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+        .setting-control select, .setting-control input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        .setting-control select option {
+            background: #222;
+            color: #fff;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .slider-value {
+            font-size: 12px;
+            color: #00f59b;
+            min-width: 35px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- Overlay ด้านบน -->
-        <div class="overlay-top">
-            <div class="badge-group">
-                <div class="status-badge">
-                    <div class="dot" id="status-dot"></div>
-                    <span id="status-text">OFFLINE</span>
-                </div>
-                <div class="status-badge" style="color: var(--primary)" id="cam-name-display">CAM 1</div>
+    <div class="container" id="main-container">
+        <!-- แถบแจ้งเตือน ON AIR ด้านบน -->
+        <div class="tally-banner" id="tally-banner">🔴 LIVE ON AIR</div>
+
+        <!-- แถบ Overlay ด้านบน -->
+        <div class="overlay">
+            <div class="status-badge" id="status-badge">
+                <div class="dot" id="status-dot"></div>
+                <span id="status-text">กำลังเตรียมการ...</span>
             </div>
             <div class="status-badge" id="stream-id-display">ID: ---</div>
         </div>
 
-        <!-- แถบวัดค่า Telemetry -->
-        <div class="telemetry-bar">
-            <span>RES: <b id="stat-res">1080p</b></span>
-            <span>FPS: <b id="stat-fps">--</b></span>
-            <span>BITRATE: <b id="stat-bitrate">-- kbps</b></span>
-        </div>
-
-        <!-- IFrame VDO.Ninja (รับผิดชอบ WebRTC, MediaStream) -->
+        <!-- VDO.Ninja Engine ใน IFrame -->
         <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
 
-        <!-- ปุ่มปรับ Zoom & Manual Focus สไลเดอร์ด้านข้าง -->
-        <div class="side-controls">
-            <div class="slider-group">
-                <label>ZOOM</label>
-                <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="applyZoom(this.value)">
-            </div>
-            <div class="slider-group">
-                <label>FOCUS</label>
-                <input type="range" id="focus-slider" min="0" max="100" step="1" value="0" disabled oninput="applyFocus(this.value)">
-            </div>
+        <!-- ข้อความแจ้งเตือนกลางจอ -->
+        <div class="info-panel" id="info-panel">
+            <h2>📱 พร้อมถ่ายทอดสด</h2>
+            <p id="mode-text">กำลังโหลดการตั้งค่า...</p>
+            <p style="font-size: 10px; color: #888; margin-top: 10px;">หากกล้องไม่ขึ้น ให้กดอนุญาตสิทธิ์กล้อง/ไมค์ บนเบราว์เซอร์</p>
         </div>
 
-        <!-- Info Banner กลางจอ -->
-        <div class="info-banner" id="info-banner">
-            <h2>📷 OBS Mobile Camera Pro</h2>
-            <p id="mode-text">กำลังโหลดการตั้งค่าระบบ...</p>
-            <p id="remote-text" style="color: #888; font-size: 10px; margin-top: 8px;">สแกนสิทธิ์กล้อง/ไมค์ หากมีแจ้งเตือน</p>
+        <!-- แถบปุ่มควบคุมด้านล่าง -->
+        <div class="controls-bottom">
+            <button class="btn-action" onclick="toggleCamera()" title="สลับกล้อง หน้า/หลัง">🔄</button>
+            <button class="btn-action" onclick="toggleMute()" id="mute-btn" title="เปิด/ปิด ไมค์">🎙️</button>
+            <button class="btn-action" onclick="toggleTallyManual()" id="tally-btn" title="สลับ Tally Light (ทดสอบ On Air)">🚨</button>
+            <button class="btn-action" onclick="toggleTorch()" id="torch-btn" title="เปิด/ปิด ไฟฉาย">🔦</button>
+            <button class="btn-action" onclick="toggleMirror()" id="mirror-btn" title="กลับด้านภาพ">🪞</button>
+            <button class="btn-action" onclick="toggleSettings()" title="ตั้งค่ากล้อง">⚙️</button>
         </div>
 
-        <!-- Overlay ด้านล่าง -->
-        <div class="overlay-bottom">
-            <!-- ปรับ Gain/ระดับเสียงไมค์ -->
-            <div class="audio-control-row">
-                <label>🎙️ MIC</label>
-                <input type="range" id="mic-gain" min="0" max="200" value="100" oninput="adjustMicVolume(this.value)">
-                <span id="mic-gain-val" style="font-size: 10px; width: 30px;">100%</span>
+        <!-- แผงเมนูตั้งค่ากล้อง -->
+        <div class="settings-panel" id="settings-panel">
+            <div class="settings-header">
+                <h3>⚙️ ตั้งค่ากล้อง & สตรีม</h3>
+                <button class="btn-close" onclick="toggleSettings()">✖</button>
             </div>
 
-            <!-- แถบปุ่มควบคุมหลัก -->
-            <div class="btn-row">
-                <button class="btn-action" id="torch-btn" onclick="toggleFlash()" title="เปิด/ปิด แฟลช" disabled>💡</button>
-                <button class="btn-action" id="cam-flip-btn" onclick="toggleCamera()" title="สลับกล้อง หน้า/หลัง">🔄</button>
-                
-                <!-- ปุ่ม Start / Stop LIVE -->
-                <button class="btn-live" id="live-btn" onclick="toggleLive()">START<br>LIVE</button>
-                
-                <button class="btn-action" id="mute-btn" onclick="toggleMute()" title="เปิด/ปิด ไมค์">🎙️</button>
-                <button class="btn-action" onclick="toggleSettings()" title="โหมดรีโมท">🔐</button>
+            <!-- เลือกกล้อง -->
+            <div class="setting-group">
+                <label>เลือกอุปกรณ์กล้อง (Camera Source)</label>
+                <div class="setting-control">
+                    <select id="camera-select" onchange="changeVideoDevice(this.value)">
+                        <option value="">กำลังโหลดรายการกล้อง...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- เลือกไมโครโฟน -->
+            <div class="setting-group">
+                <label>เลือกไมโครโฟน (Audio Source)</label>
+                <div class="setting-control">
+                    <select id="mic-select" onchange="changeAudioDevice(this.value)">
+                        <option value="">กำลังโหลดรายการไมค์...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ปรับความละเอียดวิดีโอ -->
+            <div class="setting-group">
+                <label>ความละเอียดวิดีโอ (Resolution)</label>
+                <div class="setting-control">
+                    <select id="res-select" onchange="changeResolution(this.value)">
+                        <option value="default">อัตโนมัติ (Default)</option>
+                        <option value="1920x1080">1080p Full HD</option>
+                        <option value="1280x720">720p HD</option>
+                        <option value="640x480">480p SD</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ปรับ Framerate -->
+            <div class="setting-group">
+                <label>เฟรมเรตสูงสุด (Max FPS)</label>
+                <div class="setting-control">
+                    <select id="fps-select" onchange="changeFPS(this.value)">
+                        <option value="60">60 FPS</option>
+                        <option value="30" selected>30 FPS</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ปรับระยะซูม -->
+            <div class="setting-group">
+                <label>ซูมภาพ (Zoom)</label>
+                <div class="setting-control slider-container">
+                    <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="changeZoom(this.value)">
+                    <span class="slider-value" id="zoom-val">1.0x</span>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // State variables
-        let isLive = false;
         let isMuted = false;
-        let isFlashOn = false;
-        let activeFacingMode = 'environment'; 
-        let videoTrack = null;
-        let capabilities = {};
+        let isTorchOn = false;
+        let isMirrored = false;
+        let isOnAir = false;
+        const iframe = document.getElementById('ninja-iframe');
 
-        // URL Parameters
+        // ดึง URL Parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const pushId = urlParams.get('push') || '';
+        const pushId = urlParams.get('push');
         const quality = urlParams.get('quality') || '0';
-        const camName = urlParams.get('camname') || 'CAM 1';
-        const remotePasscode = urlParams.get('remote') || urlParams.get('pass') || 'obs123';
 
-        // UI Initialization
-        document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Not Set'}`;
-        document.getElementById('cam-name-display').innerText = camName;
+        document.getElementById('stream-id-display').innerText = `ID: ${pushId || 'Unknown'}`;
 
         function getQualitySettings(q) {
-            if (q === '0') return { label: '🔌 USB Mode (บิตเรตสูงสุด / 60FPS)', bitrate: 6000, maxfps: 60, res: '1080' };
-            if (q === '1') return { label: '📶 Wi-Fi Mode (สมดุลเสถียร / 30FPS)', bitrate: 3500, maxfps: 30, res: '720' };
-            return { label: '📡 4G/5G Mode (ประหยัดข้อมูล)', bitrate: 1500, maxfps: 30, res: '540' };
+            if (q === '0') {
+                return { label: '🔌 USB Mode (บิตเรตสูงสุด / ดีเลย์ต่ำ)', bitrate: 6000, maxfps: 60 };
+            } else if (q === '1') {
+                return { label: '📶 Wi-Fi Mode (เสถียร / สมดุล)', bitrate: 3500, maxfps: 30 };
+            } else {
+                return { label: '📡 4G/5G Mode (ประหยัดอินเทอร์เน็ต)', bitrate: 1500, maxfps: 30 };
+            }
         }
 
         const qSettings = getQualitySettings(quality);
         document.getElementById('mode-text').innerText = qSettings.label;
 
-        const iframe = document.getElementById('ninja-iframe');
-
-        // 1. โหลด VDO.Ninja พร้อมส่งภาพจริงจาก getUserMedia() ผ่าน WebRTC Engine
-        function initNinjaEngine() {
+        // เริ่มต้นสร้าง VDO.Ninja Engine
+        function initNinja() {
             if (!pushId) {
-                alert('ไม่พบ Push ID! กรุณาสแกน QR Code จาก OBS Control Center');
+                alert('ไม่พบ Stream ID! กรุณาสแกน QR Code ใหม่อีกครั้ง');
+                document.getElementById('status-text').innerText = 'NO STREAM ID';
                 return;
             }
 
-            // &remote=... เปิดระบบ ควบคุมระยะไกล รองรับ Control Center สั่งงาน
-            // &push=... ID สตรีม
-            // &webcam &autostart &cleanoutput ซ่อน UI Ninja ให้เหลือแค่ภาพดิบ
+            // เปิดใช้งาน API (&api=1), ซ่อนปุ่ม VDO.Ninja (&cb=0)
             let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back`;
-            ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}&quality=${qSettings.res}`;
-            ninjaUrl += `&remote=${remotePasscode}&label=${encodeURIComponent(camName)}`;
+            ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}`;
 
             iframe.src = ninjaUrl;
         }
 
-        // 2. ฟังข้อความจาก VDO.Ninja (IFRAME API & Multi-Camera Control Center)
+        // รับข้อมูลสถานะกลับมาจาก VDO.Ninja API
         window.addEventListener('message', function(e) {
             if (e.source !== iframe.contentWindow) return;
 
             try {
                 const data = JSON.parse(e.data);
 
-                // สถานะการเชื่อมต่อ
-                if (data.action === 'system') {
-                    if (data.value === 'connected') {
-                        document.getElementById('status-dot').className = 'dot active';
-                        document.getElementById('status-text').innerText = 'READY';
-                        setTimeout(() => document.getElementById('info-banner').style.opacity = '0', 3000);
-                        detectCameraCapabilities();
-                    }
+                // เมื่อระบบเชื่อมต่อสำเร็จ
+                if (data.action === 'system' && data.value === 'connected') {
+                    document.getElementById('status-dot').classList.add('active');
+                    document.getElementById('status-text').innerText = 'ONLINE';
+
+                    setTimeout(() => {
+                        document.getElementById('info-panel').style.opacity = '0';
+                    }, 3000);
+
+                    sendNinjaCommand({ action: 'getDevices' });
                 }
 
-                // รับ Telemetry (FPS, Bitrate, Resolution)
-                if (data.action === 'stats') {
-                    if (data.fps) document.getElementById('stat-fps').innerText = Math.round(data.fps);
-                    if (data.bitrate) document.getElementById('stat-bitrate').innerText = `${data.bitrate} kbps`;
-                    if (data.height) document.getElementById('stat-res').innerText = `${data.height}p`;
+                // 🔴 รับสัญญาณ Tally จาก VDO.Ninja (เมื่อ Director/OBS สั่ง On Air หรือมีการดึงสัญญาณไปใช้งาน)
+                if (data.action === 'tally' || data.action === 'active_scene') {
+                    setTallyState(data.value === true || data.value === 1 || data.state === 'active');
                 }
 
-                // สั่งงานจาก Remote Control Center ข้ามอุปกรณ์ (Passcode)
-                if (data.action === 'remote_command') {
-                    handleRemoteControlCommand(data.cmd, data.val);
+                // เมื่อมีการดึงฟีดภาพจาก OBS
+                if (data.action === 'stream_active') {
+                    setTallyState(true);
                 }
 
+                if (data.action === 'deviceList') {
+                    populateDeviceLists(data.value);
+                }
             } catch (err) {
-                // Ignore non-json
+                // ข้ามข้อความที่ไม่ใช่ JSON
             }
         });
 
-        // 3. ฟังก์ชันควบคุมสั่งงานไปยัง Iframe
+        // ส่งคำสั่ง API ไปที่ iframe
         function sendNinjaCommand(cmdObject) {
             if (iframe && iframe.contentWindow) {
                 iframe.contentWindow.postMessage(JSON.stringify(cmdObject), '*');
             }
         }
 
-        // 🔴 Start / Stop Live Toggle
-        function toggleLive() {
-            isLive = !isLive;
-            const btn = document.getElementById('live-btn');
-            const dot = document.getElementById('status-dot');
+        // === ระบบควบคุม Tally Light ===
+        function setTallyState(active) {
+            isOnAir = active;
+            const container = document.getElementById('main-container');
             const statusText = document.getElementById('status-text');
+            const statusBadge = document.getElementById('status-badge');
+            const tallyBtn = document.getElementById('tally-btn');
 
-            if (isLive) {
-                btn.classList.add('is-streaming');
-                btn.innerHTML = 'STOP<br>LIVE';
-                dot.className = 'dot live';
-                statusText.innerText = '🔴 LIVE';
-                sendNinjaCommand({ action: 'play' });
+            if (isOnAir) {
+                container.classList.add('on-air');
+                statusBadge.classList.add('on-air-badge');
+                statusText.innerText = 'LIVE ON AIR';
+                tallyBtn.classList.add('tally-active');
             } else {
-                btn.classList.remove('is-streaming');
-                btn.innerHTML = 'START<br>LIVE';
-                dot.className = 'dot active';
+                container.classList.remove('on-air');
+                statusBadge.classList.remove('on-air-badge');
                 statusText.innerText = 'ONLINE';
-                sendNinjaCommand({ action: 'pause' });
+                tallyBtn.classList.remove('tally-active');
             }
-
-            // ส่งสถานะกลับไปยัง Control Center
-            broadcastStatusToControlCenter();
         }
 
-        // 🚀 สลับกล้องแบบไร้รอยต่อ (ไร้ปัญหากล้องดับ)
+        // สลับสถานะ Tally ด้วยตนเอง (สำหรับทดสอบหรือแจ้งเตือนฝั่งคนถือกล้อง)
+        function toggleTallyManual() {
+            setTallyState(!isOnAir);
+            // ส่งคำสั่งแจ้ง VDO.Ninja / Director ทราบ
+            sendNinjaCommand({ action: 'tally', value: isOnAir });
+        }
+
+        // === ฟังก์ชันปุ่มควบคุมหลัก ===
+
+        // 1. สลับกล้อง (หน้า/หลัง)
         function toggleCamera() {
-            document.getElementById('cam-flip-btn').disabled = true;
-            activeFacingMode = (activeFacingMode === 'environment') ? 'user' : 'environment';
-
-            // ส่ง API เปลี่ยนกล้องโดยตรงโดยไม่ต้อง Reload Iframe
             sendNinjaCommand({ action: 'changeVideoTarget' });
-
-            setTimeout(() => {
-                detectCameraCapabilities();
-                document.getElementById('cam-flip-btn').disabled = false;
-            }, 1200);
         }
 
-        // 💡 ตรวจสอบฮาร์ดแวร์ Flash / Zoom / Focus
-        async function detectCameraCapabilities() {
-            try {
-                // ดึง Track ภาพจริงที่เบราว์เซอร์ใช้งานอยู่
-                const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: activeFacingMode } 
-                });
-                videoTrack = mediaStream.getVideoTracks()[0];
-                capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
-
-                // แฟลช
-                const torchBtn = document.getElementById('torch-btn');
-                if (capabilities.torch) {
-                    torchBtn.disabled = false;
-                } else {
-                    torchBtn.disabled = true;
-                    isFlashOn = false;
-                    torchBtn.classList.remove('active');
-                }
-
-                // Zoom
-                const zoomSlider = document.getElementById('zoom-slider');
-                if (capabilities.zoom) {
-                    zoomSlider.min = capabilities.zoom.min;
-                    zoomSlider.max = capabilities.zoom.max;
-                    zoomSlider.step = capabilities.zoom.step;
-                    zoomSlider.disabled = false;
-                }
-
-                // Focus
-                const focusSlider = document.getElementById('focus-slider');
-                if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
-                    focusSlider.disabled = false;
-                    if(capabilities.focusDistance) {
-                        focusSlider.min = capabilities.focusDistance.min;
-                        focusSlider.max = capabilities.focusDistance.max;
-                        focusSlider.step = capabilities.focusDistance.step;
-                    }
-                } else {
-                    focusSlider.disabled = true;
-                }
-
-            } catch (e) {
-                console.warn('Capability check non-critical error:', e);
-            }
-        }
-
-        // 💡 ปรับ Flash/Torch
-        async function toggleFlash() {
-            if (!videoTrack || !capabilities.torch) return;
-            isFlashOn = !isFlashOn;
-            try {
-                await videoTrack.applyConstraints({
-                    advanced: [{ torch: isFlashOn }]
-                });
-                document.getElementById('torch-btn').classList.toggle('active', isFlashOn);
-            } catch (err) {
-                console.error("Torch error:", err);
-            }
-        }
-
-        // 🔍 Zoom แบบ Smooth
-        async function applyZoom(val) {
-            if (!videoTrack || !capabilities.zoom) return;
-            try {
-                await videoTrack.applyConstraints({
-                    advanced: [{ zoom: parseFloat(val) }]
-                });
-            } catch (e) {}
-        }
-
-        // 🎯 Manual Focus Slider
-        async function applyFocus(val) {
-            if (!videoTrack) return;
-            try {
-                await videoTrack.applyConstraints({
-                    advanced: [{ focusMode: 'manual', focusDistance: parseFloat(val) }]
-                });
-            } catch (e) {}
-        }
-
-        // 🎙️ Mute / Unmute
+        // 2. เปิด/ปิด ไมโครโฟน
         function toggleMute() {
             isMuted = !isMuted;
             sendNinjaCommand({ action: 'mute', value: isMuted });
+
             const btn = document.getElementById('mute-btn');
             btn.innerText = isMuted ? '🔇' : '🎙️';
-            btn.classList.toggle('active', isMuted);
+            btn.classList.toggle('active-state', isMuted);
         }
 
-        // 🔊 ปรับระดับเสียงไมค์ Gain
-        function adjustMicVolume(val) {
-            document.getElementById('mic-gain-val').innerText = `${val}%`;
-            const volumeNormalized = parseFloat(val) / 100.0;
-            // ส่งไปปรับ Gain โน้ตเพลง/ไมค์ ใน VDO.Ninja
-            sendNinjaCommand({ action: 'micGain', value: volumeNormalized });
+        // 3. เปิด/ปิด ไฟฉาย (Torch)
+        function toggleTorch() {
+            isTorchOn = !isTorchOn;
+            sendNinjaCommand({ action: 'torch', value: isTorchOn });
+
+            const btn = document.getElementById('torch-btn');
+            btn.classList.toggle('active-state', isTorchOn);
         }
 
-        // 🎛️ คำสั่งจาก OBS Multi Camera Control Center
-        function handleRemoteControlCommand(cmd, val) {
-            switch(cmd) {
-                case 'zoom':
-                    document.getElementById('zoom-slider').value = val;
-                    applyZoom(val);
-                    break;
-                case 'focus':
-                    document.getElementById('focus-slider').value = val;
-                    applyFocus(val);
-                    break;
-                case 'flip':
-                    toggleCamera();
-                    break;
-                case 'flash':
-                    toggleFlash();
-                    break;
-                case 'start_live':
-                    if(!isLive) toggleLive();
-                    break;
-                case 'stop_live':
-                    if(isLive) toggleLive();
-                    break;
+        // 4. กลับด้านภาพ (Mirror)
+        function toggleMirror() {
+            isMirrored = !isMirrored;
+            sendNinjaCommand({ action: 'mirror', value: isMirrored });
+
+            const btn = document.getElementById('mirror-btn');
+            btn.classList.toggle('active-state', isMirrored);
+        }
+
+        // 5. เปิด/ปิด เมนูตั้งค่า
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                sendNinjaCommand({ action: 'getDevices' });
             }
         }
 
-        // 🔄 ส่งสถานะกล้องไปยัง Control Center
-        function broadcastStatusToControlCenter() {
-            sendNinjaCommand({
-                action: 'send_custom_data',
-                value: {
-                    camName: camName,
-                    isLive: isLive,
-                    isMuted: isMuted,
-                    isFlashOn: isFlashOn,
-                    battery: navigator.getBattery ? 'supported' : 'unknown'
+        // === ฟังก์ชันการตั้งค่ากล้อง ===
+
+        function populateDeviceLists(devices) {
+            const cameraSelect = document.getElementById('camera-select');
+            const micSelect = document.getElementById('mic-select');
+
+            cameraSelect.innerHTML = '';
+            micSelect.innerHTML = '';
+
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.text = device.label || `${device.kind} (${device.deviceId.slice(0,5)}...)`;
+
+                if (device.kind === 'videoinput') {
+                    cameraSelect.appendChild(option);
+                } else if (device.kind === 'audioinput') {
+                    micSelect.appendChild(option);
                 }
             });
         }
 
-        function toggleSettings() {
-            alert(`🔐 Remote Control Active\n\nCamera Name: ${camName}\nPasscode: ${remotePasscode}\nStream ID: ${pushId}`);
+        function changeVideoDevice(deviceId) {
+            if (deviceId) {
+                sendNinjaCommand({ action: 'changeVideoTarget', value: deviceId });
+            }
         }
 
-        // Init App On Load
+        function changeAudioDevice(deviceId) {
+            if (deviceId) {
+                sendNinjaCommand({ action: 'changeAudioTarget', value: deviceId });
+            }
+        }
+
+        function changeResolution(res) {
+            if (res === 'default') return;
+            const [w, h] = res.split('x');
+            sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
+        }
+
+        function changeFPS(fps) {
+            sendNinjaCommand({ action: 'framerate', value: parseInt(fps) });
+        }
+
+        function changeZoom(val) {
+            document.getElementById('zoom-val').innerText = `${val}x`;
+            sendNinjaCommand({ action: 'zoom', value: parseFloat(val) });
+        }
+
+        // เริ่มต้นการทำงาน
         window.onload = () => {
-            initNinjaEngine();
+            initNinja();
         };
     </script>
 </body>
