@@ -91,6 +91,7 @@
             background: rgba(0,0,0,0.5);
             padding: 4px 8px;
             border-radius: 4px;
+            cursor: pointer;
         }
         .hud-info span {
             color: #00f59b;
@@ -246,8 +247,8 @@
             <div class="status-dot"></div>
             <span id="live-text">AUTO START...</span>
         </div>
-        <div class="hud-info">
-            ID: <span id="hud-stream-id">...</span>
+        <div class="hud-info" onclick="copyObsLink()" title="คลิกเพื่อคัดลอกลิงก์ OBS View">
+            ID: <span id="hud-stream-id">...</span> 📋
         </div>
     </div>
 
@@ -319,11 +320,6 @@
         function initStream() {
             parseParams();
 
-            // พารามิเตอร์สำคัญเพื่อให้เริ่มกล้อง/ไมค์ทันทีไม่ต้องกดปุ่ม:
-            // &autostart=1  -> เริ่มเปิดกล้อง+ไมค์ทันที
-            // &autoplay=1   -> เล่นวิดีโอทันที
-            // &push=ID      -> ส่งสัญญาณเข้า Stream ID
-            // &cleanoutput=1 -> ปิดปุ่มเมนูเกะกะ
             let ninjaUrl = `https://vdo.ninja/?push=${streamId}&autostart=1&autoplay=1&cleanoutput=1&api=1&postmessage=1&label=Mobile_Cam&meter=1`;
 
             if (quality === '0') {
@@ -338,6 +334,16 @@
             updateBadge('connecting', 'STARTING CAM...');
         }
 
+        // คัดลอกลิงก์ OBS View ไปใช้ในคอม
+        function copyObsLink() {
+            const obsUrl = `https://vdo.ninja/?view=${streamId}`;
+            navigator.clipboard.writeText(obsUrl).then(() => {
+                showToast("คัดลอกลิงก์ OBS เรียบร้อย!");
+            }).catch(() => {
+                showToast("ไม่สามารถคัดลอกลิงก์ได้");
+            });
+        }
+
         // ฟัง Event และระดับเสียงจาก VDO.Ninja
         window.addEventListener('message', function(e) {
             if (!e.data) return;
@@ -347,13 +353,11 @@
                 try { data = JSON.parse(e.data); } catch(err) { return; }
             }
 
-            // รับค่าระดับเสียงจากไมค์ (Audio Volume Meter)
             if (data.action === 'volume') {
                 const volumePercent = Math.min(100, Math.max(0, data.value * 100));
                 document.getElementById('vu-bar').style.width = isMuted ? '0%' : volumePercent + '%';
             }
 
-            // รับสถานะการเชื่อมต่อ
             if (data.action === 'state') {
                 if (data.value === 'connected' || data.value === 'playing') {
                     updateBadge('online', 'LIVE');
@@ -462,6 +466,12 @@
                 }
             } catch (err) {}
         }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await enableWakeLock();
+            }
+        });
 
         window.onload = function() {
             initStream();
