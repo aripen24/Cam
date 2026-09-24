@@ -2,660 +2,127 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OBSCam Phone - Pro Camera Sender</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Streamer</title>
     <style>
         * {
             box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
+        }
+        body {
             margin: 0;
             padding: 0;
-        }
-        body, html {
-            width: 100%;
-            height: 100%;
             background-color: #000;
             color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-        }
-        .app-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-        }
-
-        /* Video Display Area */
-        #local-video {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 1;
-            background: #000;
-        }
-
-        /* Camera Grid Overlay */
-        .camera-grid {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            pointer-events: none;
-            display: none;
-            grid-template-columns: 1fr 1fr 1fr;
-            grid-template-rows: 1fr 1fr 1fr;
-        }
-        .camera-grid.active {
-            display: grid;
-        }
-        .grid-cell {
-            border: 0.5px solid rgba(255, 255, 255, 0.15);
-        }
-
-        /* Ninja Frame Backend Engine */
-        #ninja-iframe {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        /* Top Header Navigation */
-        .top-bar {
-            position: relative;
-            z-index: 10;
-            padding: 12px 16px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .room-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(20, 20, 25, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .status-dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background-color: #ff3b30;
-        }
-        .status-dot.online {
-            background-color: #34c759;
-            box-shadow: 0 0 8px #34c759;
-        }
-        .info-stats {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.6);
-            margin-left: 4px;
-        }
-
-        /* Right Side Camera Toolbar (Zoom & Flash Control) */
-        .right-toolbar {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 15;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: rgba(15, 15, 20, 0.5);
-            backdrop-filter: blur(16px);
-            padding: 14px 8px;
-            border-radius: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            gap: 12px;
-        }
-        .zoom-slider-v {
-            writing-mode: bt-lr;
-            -webkit-appearance: slider-vertical;
-            width: 6px;
-            height: 130px;
-            accent-color: #0a84ff;
-            cursor: pointer;
-        }
-        .zoom-val-text {
-            font-size: 11px;
-            font-weight: 700;
-            color: #0a84ff;
-        }
-
-        /* Quick Lens Switcher Pills (0.5x, 1x, 2x, 3x) */
-        .lens-selector {
-            position: absolute;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 15;
-            display: flex;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
-            padding: 6px 12px;
-            border-radius: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        .lens-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: none;
-            color: #fff;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .lens-btn.active {
-            background: #0a84ff;
-            color: #fff;
-            transform: scale(1.1);
-            box-shadow: 0 0 10px rgba(10, 132, 255, 0.6);
-        }
-
-        /* Circular Action Buttons */
-        .btn-round {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            color: #fff;
-            border-radius: 50%;
-            width: 46px;
-            height: 46px;
-            display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            height: 100vh;
+            overflow: hidden;
         }
-        .btn-round:active {
-            transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.3);
-        }
-        .btn-round.active {
-            background: rgba(10, 132, 255, 0.5);
-            border-color: #0a84ff;
-            box-shadow: 0 0 10px rgba(10, 132, 255, 0.5);
-        }
-
-        /* Bottom Menu Dock */
-        .bottom-dock {
-            position: relative;
-            z-index: 10;
-            padding: 16px 20px 28px 20px;
-            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-        }
-        .bottom-dock .btn-round {
-            width: 54px;
-            height: 54px;
-            font-size: 22px;
-        }
-
-        /* Slide-up Settings Drawer */
-        .drawer-panel {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            max-height: 80vh;
-            background: rgba(20, 20, 24, 0.96);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 24px 24px 0 0;
-            z-index: 30;
-            padding: 20px;
-            overflow-y: auto;
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
-        }
-        .drawer-panel.open {
-            transform: translateY(0);
-        }
-        .drawer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .drawer-header h3 {
-            font-size: 17px;
-            color: #0a84ff;
-            font-weight: 600;
-        }
-        .btn-close-drawer {
-            background: rgba(255, 255, 255, 0.1);
+        #ninja-frame {
+            width: 100vw;
+            height: 100vh;
             border: none;
-            color: #ccc;
-            width: 30px;
-            height: 30px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .loading-box {
+            position: absolute;
+            z-index: 2;
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #00f59b;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid #00f59b;
             border-radius: 50%;
-            cursor: pointer;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
         }
-        .form-group {
-            margin-bottom: 16px;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            color: #8e8e93;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .form-control select, .form-control input[type="range"] {
-            width: 100%;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            color: #fff;
+        p {
+            margin: 0;
             font-size: 14px;
-            outline: none;
-        }
-        .form-control select option {
-            background: #1c1c1e;
-            color: #fff;
-        }
-        .range-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .range-val {
-            font-size: 13px;
-            color: #0a84ff;
-            font-weight: bold;
-            min-width: 60px;
-            text-align: right;
+            color: #00f59b;
         }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- Grid View Overlay -->
-        <div class="camera-grid" id="camera-grid">
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        </div>
-
-        <!-- Video Stream Preview -->
-        <video id="local-video" autoplay playsinline muted></video>
-
-        <!-- VDO.Ninja Connection Engine -->
-        <iframe id="ninja-iframe" allow="camera; microphone; autoplay; display-capture"></iframe>
-
-        <!-- Top Header Status Bar -->
-        <div class="top-bar">
-            <div class="room-badge">
-                <div class="status-dot" id="status-dot"></div>
-                <span id="room-text">ROOM: ---</span>
-                <span class="info-stats" id="stats-display">OFFLINE</span>
-            </div>
-            <button class="btn-round" style="width:36px; height:36px; font-size:14px;" onclick="toggleGrid()" id="grid-btn" title="Grid Line">🌐</button>
-        </div>
-
-        <!-- Right Side Control Bar: Torch + Zoom -->
-        <div class="right-toolbar">
-            <button class="btn-round" id="torch-btn" onclick="toggleTorch()" title="Torch Light">🔦</button>
-            <hr style="width: 80%; border:0; border-top: 1px solid rgba(255,255,255,0.15); margin: 2px 0;">
-            <span class="zoom-val-text" id="zoom-val">1.0x</span>
-            <input type="range" class="zoom-slider-v" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="setZoom(this.value)">
-            <span style="font-size: 12px;">🔍</span>
-        </div>
-
-        <!-- Quick Camera Lens Preset Selector -->
-        <div class="lens-selector" id="lens-selector">
-            <button class="lens-btn" onclick="quickLensSwitch('ultrawide')">0.5</button>
-            <button class="lens-btn active" onclick="quickLensSwitch('main')">1x</button>
-            <button class="lens-btn" onclick="quickLensSwitch('tele')">2x</button>
-        </div>
-
-        <!-- Bottom Navigation Dock -->
-        <div class="bottom-dock">
-            <button class="btn-round" onclick="switchCameraSequence()" title="Switch Camera">🔄</button>
-            <button class="btn-round" onclick="toggleMute()" id="mute-btn" title="Mute Mic">🎙️</button>
-            <button class="btn-round" onclick="toggleMirror()" id="mirror-btn" title="Mirror Video">🪞</button>
-            <button class="btn-round" onclick="openDrawer()" title="Settings">⚙️</button>
-        </div>
-
-        <!-- Settings Slide Drawer -->
-        <div class="drawer-panel" id="settings-drawer">
-            <div class="drawer-header">
-                <h3>📷 OBSCam Settings</h3>
-                <button class="btn-close-drawer" onclick="closeDrawer()">✕</button>
-            </div>
-
-            <!-- Hardware Camera Device Selection -->
-            <div class="form-group">
-                <label>Camera Source (อุปกรณ์กล้อง)</label>
-                <div class="form-control">
-                    <select id="camera-select" onchange="changeHardwareCamera(this.value)">
-                        <option value="">Loading cameras...</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Microphone Selection -->
-            <div class="form-group">
-                <label>Audio Source (ไมโครโฟน)</label>
-                <div class="form-control">
-                    <select id="mic-select" onchange="changeHardwareMic(this.value)">
-                        <option value="">Loading microphones...</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Quality Preset -->
-            <div class="form-group">
-                <label>Connection Mode (โหมดการเชื่อมต่อ)</label>
-                <div class="form-control">
-                    <select id="mode-select" onchange="applyModePreset(this.value)">
-                        <option value="usb">🔌 USB Tethering (Max Quality / Ultra-low Latency)</option>
-                        <option value="wifi" selected>📶 Wi-Fi Network (Balanced)</option>
-                        <option value="mobile">📡 Mobile Data 4G/5G (Bandwidth Saver)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Bitrate Fine Tuning -->
-            <div class="form-group">
-                <label>Target Bitrate (อัตราบิตเรต)</label>
-                <div class="form-control range-container">
-                    <input type="range" id="bitrate-range" min="500" max="15000" step="500" value="4000" oninput="updateBitrateLabel(this.value)" onchange="sendBitrateCommand(this.value)">
-                    <span class="range-val" id="bitrate-lbl">4,000 k</span>
-                </div>
-            </div>
-
-            <!-- Resolution & FPS -->
-            <div class="form-group">
-                <label>Resolution (ความละเอียดวิดีโอ)</label>
-                <div class="form-control">
-                    <select id="res-select" onchange="sendResolutionCommand(this.value)">
-                        <option value="1920x1080">1080p Full HD</option>
-                        <option value="1280x720" selected>720p HD</option>
-                        <option value="640x480">480p SD</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Max Framerate (เฟรมเรต)</label>
-                <div class="form-control">
-                    <select id="fps-select" onchange="sendFPSCommand(this.value)">
-                        <option value="60">60 FPS</option>
-                        <option value="30" selected>30 FPS</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+    <div class="loading-box" id="loading">
+        <div class="spinner"></div>
+        <p>กำลังเปิดกล้องและเชื่อมต่อสตรีม...</p>
     </div>
 
+    <iframe id="ninja-frame" allow="camera; microphone; autoplay; display-capture; autoplay"></iframe>
+
     <script>
-        let currentStream = null;
-        let activeVideoTrack = null;
-        let cameraDevices = [];
-        let currentCamIndex = 0;
-
-        let isMuted = false;
-        let isTorchOn = false;
-        let isMirrored = false;
-        let isGridOn = false;
-
-        const videoEl = document.getElementById('local-video');
-        const ninjaIframe = document.getElementById('ninja-iframe');
-
-        // Parse Parameters (?room=196426 or ?push=196426)
-        const urlParams = new URLSearchParams(window.location.search);
-        const roomId = urlParams.get('room') || urlParams.get('push') || 'OBSCam' + Math.floor(Math.random() * 9000 + 1000);
-        document.getElementById('room-text').innerText = `ROOM: ${roomId}`;
-
-        // Initialize Native Camera Stream
-        async function initCameraStream(deviceId = null) {
-            if (currentStream) {
-                currentStream.getTracks().forEach(t => t.stop());
-            }
-
-            const constraints = {
-                video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' },
-                audio: true
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                push: params.get('push'),
+                front: params.get('front'),
+                res: params.get('res'),
+                quality: params.get('quality')
             };
+        }
 
-            try {
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoEl.srcObject = currentStream;
-                activeVideoTrack = currentStream.getVideoTracks()[0];
+        function initCam() {
+            const { push, front, res, quality } = getQueryParams();
+            const iframe = document.getElementById('ninja-frame');
 
-                setupZoomSlider(activeVideoTrack);
-                await enumerateDevicesList();
-                connectToNinjaEngine();
-
-            } catch (err) {
-                console.error("Camera Access Error:", err);
-                alert("ไม่สามารถเปิดใช้งานกล้องได้ กรุณาตรวจสอบสิทธิ์การใช้งานกล้อง");
+            if (!push) {
+                document.getElementById('loading').innerHTML = '<p style="color:#ff4444;">❌ ไม่พบ Stream ID โปรดสแกน QR Code ใหม่</p>';
+                return;
             }
-        }
 
-        // Hardware Native Zoom
-        function setupZoomSlider(track) {
-            if (!track) return;
-            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-            const zoomSlider = document.getElementById('zoom-slider');
+            // สร้าง URL สำหรับ VDO.Ninja Push
+            let targetUrl = `https://vdo.ninja/?push=${push}&autoplay=1&autostart=1`;
 
-            if ('zoom' in capabilities) {
-                zoomSlider.min = capabilities.zoom.min || 1;
-                zoomSlider.max = capabilities.zoom.max || 5;
-                zoomSlider.step = capabilities.zoom.step || 0.1;
-                zoomSlider.value = capabilities.zoom.min || 1;
-                document.getElementById('zoom-val').innerText = `${parseFloat(zoomSlider.value).toFixed(1)}x`;
+            // อ่านค่าสลับกล้องหน้า/หลัง
+            if (front === '1') {
+                targetUrl += `&facing=front`;
+            } else if (front === '0') {
+                targetUrl += `&facing=back`;
             }
-        }
 
-        async function setZoom(val) {
-            document.getElementById('zoom-val').innerText = `${parseFloat(val).toFixed(1)}x`;
-            if (activeVideoTrack) {
-                const capabilities = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
-                if ('zoom' in capabilities) {
-                    try {
-                        await activeVideoTrack.applyConstraints({ advanced: [{ zoom: parseFloat(val) }] });
-                    } catch (e) {
-                        videoEl.style.transform = `scale(${val})`;
-                    }
-                } else {
-                    videoEl.style.transform = `scale(${val})`;
-                }
+            // อ่านค่าความละเอียด
+            if (res) {
+                targetUrl += `&quality=0&res=${res}`;
             }
-        }
 
-        // Populate Camera & Audio Device Options
-        async function enumerateDevicesList() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const camSelect = document.getElementById('camera-select');
-            const micSelect = document.getElementById('mic-select');
-
-            camSelect.innerHTML = '';
-            micSelect.innerHTML = '';
-            cameraDevices = [];
-
-            let camIndex = 1, micIndex = 1;
-
-            devices.forEach(dev => {
-                const opt = document.createElement('option');
-                opt.value = dev.deviceId;
-
-                if (dev.kind === 'videoinput') {
-                    cameraDevices.push(dev);
-                    opt.text = dev.label || `Camera ${camIndex++}`;
-                    camSelect.appendChild(opt);
-                } else if (dev.kind === 'audioinput') {
-                    opt.text = dev.label || `Microphone ${micIndex++}`;
-                    micSelect.appendChild(opt);
-                }
-            });
-
-            if (activeVideoTrack) {
-                const settings = activeVideoTrack.getSettings();
-                if (settings.deviceId) camSelect.value = settings.deviceId;
+            // อ่านค่าโหมดคุณภาพการเชื่อมต่อ
+            if (quality !== null) {
+                if (quality === '0') targetUrl += `&mbitrate=8000&maxbitrate=8000`; // USB latency ต่ำ บิตเรตสูง
+                else if (quality === '1') targetUrl += `&mbitrate=4000`;             // Wi-Fi
+                else if (quality === '2') targetUrl += `&mbitrate=1500`;             // Cellular ประหยัดเน็ต
             }
+
+            // ผูก URL ใส่ Iframe
+            iframe.src = targetUrl;
+
+            // ซ่อนหน้าจอ Loading เมื่อโหลด Iframe เสร็จสิ้น
+            iframe.onload = () => {
+                setTimeout(() => {
+                    const loading = document.getElementById('loading');
+                    if (loading) loading.style.display = 'none';
+                }, 1000);
+            };
         }
 
-        // Quick Lens Switch
-        function quickLensSwitch(type) {
-            document.querySelectorAll('.lens-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-
-            if (type === 'ultrawide' && cameraDevices.length > 1) {
-                // Try switching to Ultra-wide lens if available
-                const wideCam = cameraDevices.find(d => d.label.toLowerCase().includes('wide') || d.label.toLowerCase().includes('0.5'));
-                if (wideCam) changeHardwareCamera(wideCam.deviceId);
-                else setZoom(1.0);
-            } else if (type === 'tele') {
-                setZoom(2.0);
-            } else {
-                setZoom(1.0);
-            }
-        }
-
-        function changeHardwareCamera(deviceId) {
-            if (deviceId) {
-                initCameraStream(deviceId);
-                postNinjaCmd({ action: 'changeVideoTarget', value: deviceId });
-            }
-        }
-
-        function switchCameraSequence() {
-            if (cameraDevices.length > 1) {
-                currentCamIndex = (currentCamIndex + 1) % cameraDevices.length;
-                const targetId = cameraDevices[currentCamIndex].deviceId;
-                document.getElementById('camera-select').value = targetId;
-                changeHardwareCamera(targetId);
-            }
-        }
-
-        function changeHardwareMic(deviceId) {
-            if (deviceId) {
-                postNinjaCmd({ action: 'changeAudioTarget', value: deviceId });
-            }
-        }
-
-        // VDO.Ninja Engine Bridge
-        function connectToNinjaEngine() {
-            let ninjaUrl = `https://vdo.ninja/?push=${roomId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back&videobitrate=4000`;
-            ninjaIframe.src = ninjaUrl;
-        }
-
-        function postNinjaCmd(cmd) {
-            if (ninjaIframe && ninjaIframe.contentWindow) {
-                ninjaIframe.contentWindow.postMessage(JSON.stringify(cmd), '*');
-            }
-        }
-
-        window.addEventListener('message', (e) => {
-            if (e.source !== ninjaIframe.contentWindow) return;
-            try {
-                const msg = JSON.parse(e.data);
-                if (msg.action === 'system' && msg.value === 'connected') {
-                    document.getElementById('status-dot').classList.add('online');
-                    document.getElementById('stats-display').innerText = 'LIVE ONLINE';
-                }
-            } catch (err) {}
-        });
-
-        // Controls
-        function toggleMute() {
-            isMuted = !isMuted;
-            if (currentStream) {
-                currentStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-            }
-            postNinjaCmd({ action: 'mute', value: isMuted });
-            const btn = document.getElementById('mute-btn');
-            btn.innerText = isMuted ? '🔇' : '🎙️';
-            btn.classList.toggle('active', isMuted);
-        }
-
-        async function toggleTorch() {
-            isTorchOn = !isTorchOn;
-            if (activeVideoTrack) {
-                const capabilities = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
-                if ('torch' in capabilities) {
-                    try {
-                        await activeVideoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
-                    } catch (e) { console.warn(e); }
-                }
-            }
-            postNinjaCmd({ action: 'torch', value: isTorchOn });
-            document.getElementById('torch-btn').classList.toggle('active', isTorchOn);
-        }
-
-        function toggleMirror() {
-            isMirrored = !isMirrored;
-            videoEl.style.transform = isMirrored ? 'scaleX(-1)' : 'scaleX(1)';
-            postNinjaCmd({ action: 'mirror', value: isMirrored });
-            document.getElementById('mirror-btn').classList.toggle('active', isMirrored);
-        }
-
-        function toggleGrid() {
-            isGridOn = !isGridOn;
-            document.getElementById('camera-grid').classList.toggle('active', isGridOn);
-            document.getElementById('grid-btn').classList.toggle('active', isGridOn);
-        }
-
-        // Drawer Settings Controls
-        function openDrawer() { document.getElementById('settings-drawer').classList.add('open'); }
-        function closeDrawer() { document.getElementById('settings-drawer').classList.remove('open'); }
-
-        function applyModePreset(mode) {
-            let bitrate = 4000;
-            if (mode === 'usb') bitrate = 8000;
-            else if (mode === 'mobile') bitrate = 1800;
-
-            document.getElementById('bitrate-range').value = bitrate;
-            updateBitrateLabel(bitrate);
-            sendBitrateCommand(bitrate);
-        }
-
-        function updateBitrateLabel(val) {
-            document.getElementById('bitrate-lbl').innerText = `${parseInt(val).toLocaleString()} k`;
-        }
-
-        function sendBitrateCommand(val) { postNinjaCmd({ action: 'bitrate', value: parseInt(val) }); }
-        function sendResolutionCommand(res) {
-            const [w, h] = res.split('x');
-            postNinjaCmd({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
-        }
-        function sendFPSCommand(fps) { postNinjaCmd({ action: 'framerate', value: parseInt(fps) }); }
-
-        window.onload = () => {
-            initCameraStream();
-        };
+        window.onload = initCam;
     </script>
 </body>
 </html>
