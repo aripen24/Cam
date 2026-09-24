@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OBS Ninja Pro Mobile Camera + Tally Light</title>
+    <title>OBS Ninja Pro Mobile Camera Sender</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,46 +27,6 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            border: 0px solid transparent;
-            transition: border 0.3s ease;
-        }
-
-        /* 🔴 สไตล์สำหรับ Tally Light (ON AIR Status) */
-        .container.on-air {
-            border: 8px solid #ff0000;
-            box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.8);
-            animation: pulse-border 1.5s infinite alternate;
-        }
-
-        @keyframes pulse-border {
-            0% { border-color: #ff0000; box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.6); }
-            100% { border-color: #990000; box-shadow: inset 0 0 30px rgba(255, 0, 0, 0.9); }
-        }
-
-        /* แถบเตือน ON AIR ตัวหนาด้านบนสุด */
-        .tally-banner {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ff0000;
-            color: #ffffff;
-            font-weight: 900;
-            font-size: 14px;
-            letter-spacing: 2px;
-            padding: 4px 20px;
-            border-radius: 0 0 12px 12px;
-            z-index: 30;
-            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5);
-            animation: blink 1s infinite;
-        }
-        .container.on-air .tally-banner {
-            display: block;
-        }
-
-        @keyframes blink {
-            50% { opacity: 0.7; }
         }
 
         /* iframe VDO.Ninja เต็มจอด้านหลัง */
@@ -85,7 +45,6 @@
             position: relative;
             z-index: 10;
             padding: 16px;
-            padding-top: 24px;
             background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
             display: flex;
             justify-content: space-between;
@@ -102,12 +61,6 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
-            transition: all 0.3s;
-        }
-        .status-badge.on-air-badge {
-            background: rgba(255, 0, 0, 0.8);
-            border-color: #ff4444;
-            color: #fff;
         }
         .dot {
             width: 8px;
@@ -118,10 +71,6 @@
         .dot.active {
             background-color: #00f59b;
             box-shadow: 0 0 8px #00f59b;
-        }
-        .container.on-air .dot.active {
-            background-color: #ffffff;
-            box-shadow: 0 0 8px #ffffff;
         }
 
         /* แถบควบคุมด้านล่าง */
@@ -140,12 +89,12 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
             border-radius: 50%;
-            width: 52px;
-            height: 52px;
+            width: 56px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 20px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -156,11 +105,6 @@
         .btn-action.active-state {
             background: rgba(0, 245, 155, 0.4);
             border-color: #00f59b;
-        }
-        .btn-action.tally-active {
-            background: rgba(255, 0, 0, 0.6);
-            border-color: #ff0000;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
         }
 
         /* กล่องแจ้งเตือนกลางจอ */
@@ -191,7 +135,7 @@
             color: #ccc;
         }
 
-        /* แผงเมนูตั้งค่ากล้อง */
+        /* แผงเมนูตั้งค่ากล้อง (Settings Drawer) */
         .settings-panel {
             position: absolute;
             bottom: 0;
@@ -268,13 +212,10 @@
 </head>
 <body>
 
-    <div class="container" id="main-container">
-        <!-- แถบแจ้งเตือน ON AIR ด้านบน -->
-        <div class="tally-banner" id="tally-banner">🔴 LIVE ON AIR</div>
-
+    <div class="container">
         <!-- แถบ Overlay ด้านบน -->
         <div class="overlay">
-            <div class="status-badge" id="status-badge">
+            <div class="status-badge">
                 <div class="dot" id="status-dot"></div>
                 <span id="status-text">กำลังเตรียมการ...</span>
             </div>
@@ -295,13 +236,12 @@
         <div class="controls-bottom">
             <button class="btn-action" onclick="toggleCamera()" title="สลับกล้อง หน้า/หลัง">🔄</button>
             <button class="btn-action" onclick="toggleMute()" id="mute-btn" title="เปิด/ปิด ไมค์">🎙️</button>
-            <button class="btn-action" onclick="toggleTallyManual()" id="tally-btn" title="สลับ Tally Light (ทดสอบ On Air)">🚨</button>
             <button class="btn-action" onclick="toggleTorch()" id="torch-btn" title="เปิด/ปิด ไฟฉาย">🔦</button>
             <button class="btn-action" onclick="toggleMirror()" id="mirror-btn" title="กลับด้านภาพ">🪞</button>
             <button class="btn-action" onclick="toggleSettings()" title="ตั้งค่ากล้อง">⚙️</button>
         </div>
 
-        <!-- แผงเมนูตั้งค่ากล้อง -->
+        <!-- แผงเมนูตั้งค่ากล้อง (Settings Drawer) -->
         <div class="settings-panel" id="settings-panel">
             <div class="settings-header">
                 <h3>⚙️ ตั้งค่ากล้อง & สตรีม</h3>
@@ -367,7 +307,6 @@
         let isMuted = false;
         let isTorchOn = false;
         let isMirrored = false;
-        let isOnAir = false;
         const iframe = document.getElementById('ninja-iframe');
 
         // ดึง URL Parameters
@@ -398,7 +337,7 @@
                 return;
             }
 
-            // เปิดใช้งาน API (&api=1), ซ่อนปุ่ม VDO.Ninja (&cb=0)
+            // เปิดใช้งาน API (&api=1), ซ่อนปุ่ม VDO.Ninja (&cb=0) และแสดงภาพเต็มจอ
             let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back`;
             ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}`;
 
@@ -415,25 +354,17 @@
                 // เมื่อระบบเชื่อมต่อสำเร็จ
                 if (data.action === 'system' && data.value === 'connected') {
                     document.getElementById('status-dot').classList.add('active');
-                    document.getElementById('status-text').innerText = 'ONLINE';
+                    document.getElementById('status-text').innerText = 'LIVE ONLINE';
 
                     setTimeout(() => {
                         document.getElementById('info-panel').style.opacity = '0';
                     }, 3000);
 
+                    // ขอรายการอุปกรณ์กล้องและไมค์จาก VDO.Ninja
                     sendNinjaCommand({ action: 'getDevices' });
                 }
 
-                // 🔴 รับสัญญาณ Tally จาก VDO.Ninja (เมื่อ Director/OBS สั่ง On Air หรือมีการดึงสัญญาณไปใช้งาน)
-                if (data.action === 'tally' || data.action === 'active_scene') {
-                    setTallyState(data.value === true || data.value === 1 || data.state === 'active');
-                }
-
-                // เมื่อมีการดึงฟีดภาพจาก OBS
-                if (data.action === 'stream_active') {
-                    setTallyState(true);
-                }
-
+                // เมื่อได้รับรายการอุปกรณ์ (Device List)
                 if (data.action === 'deviceList') {
                     populateDeviceLists(data.value);
                 }
@@ -447,34 +378,6 @@
             if (iframe && iframe.contentWindow) {
                 iframe.contentWindow.postMessage(JSON.stringify(cmdObject), '*');
             }
-        }
-
-        // === ระบบควบคุม Tally Light ===
-        function setTallyState(active) {
-            isOnAir = active;
-            const container = document.getElementById('main-container');
-            const statusText = document.getElementById('status-text');
-            const statusBadge = document.getElementById('status-badge');
-            const tallyBtn = document.getElementById('tally-btn');
-
-            if (isOnAir) {
-                container.classList.add('on-air');
-                statusBadge.classList.add('on-air-badge');
-                statusText.innerText = 'LIVE ON AIR';
-                tallyBtn.classList.add('tally-active');
-            } else {
-                container.classList.remove('on-air');
-                statusBadge.classList.remove('on-air-badge');
-                statusText.innerText = 'ONLINE';
-                tallyBtn.classList.remove('tally-active');
-            }
-        }
-
-        // สลับสถานะ Tally ด้วยตนเอง (สำหรับทดสอบหรือแจ้งเตือนฝั่งคนถือกล้อง)
-        function toggleTallyManual() {
-            setTallyState(!isOnAir);
-            // ส่งคำสั่งแจ้ง VDO.Ninja / Director ทราบ
-            sendNinjaCommand({ action: 'tally', value: isOnAir });
         }
 
         // === ฟังก์ชันปุ่มควบคุมหลัก ===
@@ -521,8 +424,9 @@
             }
         }
 
-        // === ฟังก์ชันการตั้งค่ากล้อง ===
+        // === ฟังก์ชันการตั้งค่ากล้องเชิงลึก (Settings) ===
 
+        // อัปเดตรายชื่อกล้องและไมค์ลงใน `<select>`
         function populateDeviceLists(devices) {
             const cameraSelect = document.getElementById('camera-select');
             const micSelect = document.getElementById('mic-select');
@@ -543,34 +447,39 @@
             });
         }
 
+        // สลับอุปกรณ์กล้องเฉพาะตัว
         function changeVideoDevice(deviceId) {
             if (deviceId) {
                 sendNinjaCommand({ action: 'changeVideoTarget', value: deviceId });
             }
         }
 
+        // สลับอุปกรณ์ไมค์เฉพาะตัว
         function changeAudioDevice(deviceId) {
             if (deviceId) {
                 sendNinjaCommand({ action: 'changeAudioTarget', value: deviceId });
             }
         }
 
+        // เปลี่ยนความละเอียดภาพ
         function changeResolution(res) {
             if (res === 'default') return;
             const [w, h] = res.split('x');
             sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
         }
 
+        // ปรับจำกัดเฟรมเรต
         function changeFPS(fps) {
             sendNinjaCommand({ action: 'framerate', value: parseInt(fps) });
         }
 
+        // ปรับระดับการซูม
         function changeZoom(val) {
             document.getElementById('zoom-val').innerText = `${val}x`;
             sendNinjaCommand({ action: 'zoom', value: parseFloat(val) });
         }
 
-        // เริ่มต้นการทำงาน
+        // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บ
         window.onload = () => {
             initNinja();
         };
