@@ -141,7 +141,7 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            max-height: 75vh;
+            max-height: 80vh;
             background: rgba(18, 18, 20, 0.95);
             backdrop-filter: blur(16px);
             border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -206,7 +206,9 @@
         .slider-value {
             font-size: 12px;
             color: #00f59b;
-            min-width: 35px;
+            min-width: 55px;
+            text-align: right;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -241,11 +243,37 @@
             <button class="btn-action" onclick="toggleSettings()" title="ตั้งค่ากล้อง">⚙️</button>
         </div>
 
-        <!-- แผงเมนูตั้งค่ากล้อง (Settings Drawer) -->
+        <!-- แผงเมนูตั้งค่ากล้อง & Bitrate (Settings Drawer) -->
         <div class="settings-panel" id="settings-panel">
             <div class="settings-header">
                 <h3>⚙️ ตั้งค่ากล้อง & สตรีม</h3>
                 <button class="btn-close" onclick="toggleSettings()">✖</button>
+            </div>
+
+            <!-- ปรับเลือก Bitrate -->
+            <div class="setting-group">
+                <label>อัตราบิตเรต (Bitrate Selection)</label>
+                <div class="setting-control">
+                    <select id="bitrate-select" onchange="changeBitratePreset(this.value)">
+                        <option value="auto">อัตโนมัติ ตามโหมดตั้งต้น</option>
+                        <option value="1000">1,000 kbps (1 Mbps - ประหยัดเน็ต)</option>
+                        <option value="2500">2,500 kbps (2.5 Mbps - เน็ตมือถือ)</option>
+                        <option value="4000">4,000 kbps (4 Mbps - Wi-Fi ทั่วไป)</option>
+                        <option value="6000">6,000 kbps (6 Mbps - Wi-Fi แรง/USB)</option>
+                        <option value="10000">10,000 kbps (10 Mbps - USB High Quality)</option>
+                        <option value="15000">15,000 kbps (15 Mbps - Ultra HD)</option>
+                        <option value="custom">กำหนดเอง (Manual Slider)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Slider ปรับ Bitrate แบบกำหนดเอง -->
+            <div class="setting-group" id="custom-bitrate-group">
+                <label>ปรับ Bitrate แบบละเอียด (kbps)</label>
+                <div class="setting-control slider-container">
+                    <input type="range" id="bitrate-slider" min="500" max="20000" step="500" value="3500" oninput="updateBitrateSliderLabel(this.value)" onchange="changeBitrateValue(this.value)">
+                    <span class="slider-value" id="bitrate-val">3,500 k</span>
+                </div>
             </div>
 
             <!-- เลือกกล้อง -->
@@ -274,6 +302,7 @@
                 <div class="setting-control">
                     <select id="res-select" onchange="changeResolution(this.value)">
                         <option value="default">อัตโนมัติ (Default)</option>
+                        <option value="3840x2160">4K Ultra HD</option>
                         <option value="1920x1080">1080p Full HD</option>
                         <option value="1280x720">720p HD</option>
                         <option value="640x480">480p SD</option>
@@ -329,6 +358,10 @@
         const qSettings = getQualitySettings(quality);
         document.getElementById('mode-text').innerText = qSettings.label;
 
+        // กำหนดค่าบิตเรตเริ่มต้นให้ Slider
+        document.getElementById('bitrate-slider').value = qSettings.bitrate;
+        document.getElementById('bitrate-val').innerText = `${qSettings.bitrate.toLocaleString()} k`;
+
         // เริ่มต้นสร้าง VDO.Ninja Engine
         function initNinja() {
             if (!pushId) {
@@ -337,7 +370,7 @@
                 return;
             }
 
-            // เปิดใช้งาน API (&api=1), ซ่อนปุ่ม VDO.Ninja (&cb=0) และแสดงภาพเต็มจอ
+            // เปิดใช้งาน API (&api=1), ซ่อนปุ่ม VDO.Ninja (&cb=0)
             let ninjaUrl = `https://vdo.ninja/?push=${pushId}&webcam&autostart&cleanoutput&api=1&cb=0&facing=back`;
             ninjaUrl += `&videobitrate=${qSettings.bitrate}&maxfps=${qSettings.maxfps}`;
 
@@ -382,12 +415,10 @@
 
         // === ฟังก์ชันปุ่มควบคุมหลัก ===
 
-        // 1. สลับกล้อง (หน้า/หลัง)
         function toggleCamera() {
             sendNinjaCommand({ action: 'changeVideoTarget' });
         }
 
-        // 2. เปิด/ปิด ไมโครโฟน
         function toggleMute() {
             isMuted = !isMuted;
             sendNinjaCommand({ action: 'mute', value: isMuted });
@@ -397,7 +428,6 @@
             btn.classList.toggle('active-state', isMuted);
         }
 
-        // 3. เปิด/ปิด ไฟฉาย (Torch)
         function toggleTorch() {
             isTorchOn = !isTorchOn;
             sendNinjaCommand({ action: 'torch', value: isTorchOn });
@@ -406,7 +436,6 @@
             btn.classList.toggle('active-state', isTorchOn);
         }
 
-        // 4. กลับด้านภาพ (Mirror)
         function toggleMirror() {
             isMirrored = !isMirrored;
             sendNinjaCommand({ action: 'mirror', value: isMirrored });
@@ -415,7 +444,6 @@
             btn.classList.toggle('active-state', isMirrored);
         }
 
-        // 5. เปิด/ปิด เมนูตั้งค่า
         function toggleSettings() {
             const panel = document.getElementById('settings-panel');
             panel.classList.toggle('open');
@@ -424,9 +452,36 @@
             }
         }
 
+        // === ฟังก์ชันจัดการ BITRATE ===
+
+        function changeBitratePreset(val) {
+            let targetBitrate = qSettings.bitrate;
+
+            if (val === 'auto') {
+                targetBitrate = qSettings.bitrate;
+            } else if (val !== 'custom') {
+                targetBitrate = parseInt(val);
+            }
+
+            // ปรับค่าของ Slider ให้ตรงกับ Preset
+            document.getElementById('bitrate-slider').value = targetBitrate;
+            updateBitrateSliderLabel(targetBitrate);
+
+            // ส่งคำสั่งปรับ Bitrate ไปยัง VDO.Ninja API
+            sendNinjaCommand({ action: 'bitrate', value: targetBitrate });
+        }
+
+        function updateBitrateSliderLabel(val) {
+            document.getElementById('bitrate-val').innerText = `${parseInt(val).toLocaleString()} k`;
+        }
+
+        function changeBitrateValue(val) {
+            document.getElementById('bitrate-select').value = 'custom';
+            sendNinjaCommand({ action: 'bitrate', value: parseInt(val) });
+        }
+
         // === ฟังก์ชันการตั้งค่ากล้องเชิงลึก (Settings) ===
 
-        // อัปเดตรายชื่อกล้องและไมค์ลงใน `<select>`
         function populateDeviceLists(devices) {
             const cameraSelect = document.getElementById('camera-select');
             const micSelect = document.getElementById('mic-select');
@@ -447,39 +502,33 @@
             });
         }
 
-        // สลับอุปกรณ์กล้องเฉพาะตัว
         function changeVideoDevice(deviceId) {
             if (deviceId) {
                 sendNinjaCommand({ action: 'changeVideoTarget', value: deviceId });
             }
         }
 
-        // สลับอุปกรณ์ไมค์เฉพาะตัว
         function changeAudioDevice(deviceId) {
             if (deviceId) {
                 sendNinjaCommand({ action: 'changeAudioTarget', value: deviceId });
             }
         }
 
-        // เปลี่ยนความละเอียดภาพ
         function changeResolution(res) {
             if (res === 'default') return;
             const [w, h] = res.split('x');
             sendNinjaCommand({ action: 'resolution', width: parseInt(w), height: parseInt(h) });
         }
 
-        // ปรับจำกัดเฟรมเรต
         function changeFPS(fps) {
             sendNinjaCommand({ action: 'framerate', value: parseInt(fps) });
         }
 
-        // ปรับระดับการซูม
         function changeZoom(val) {
             document.getElementById('zoom-val').innerText = `${val}x`;
             sendNinjaCommand({ action: 'zoom', value: parseFloat(val) });
         }
 
-        // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บ
         window.onload = () => {
             initNinja();
         };
